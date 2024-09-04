@@ -54,8 +54,11 @@ interface ILP {
             uint256 percentageSplitBalance
         );
 
-        function updatePercentageSplit(uint256 _poolId,uint256 __poolPercentageSplit) external ;
+        function reducePercentageSplit(uint256 _poolId,uint256 __poolPercentageSplit) external ;
+        function increasePercentageSplit(uint256 _poolId,uint256 __poolPercentageSplit) external ;
+        function addPoolCover(uint256 _poolId, CoverLib.Cover memory _cover) external ;
         function updatePoolCovers(uint256 _poolId, CoverLib.Cover memory _cover) external ;
+        function getPoolCovers(uint256 _poolId) external view returns (CoverLib.Cover[] memory);
 }
 
 contract InsuranceCover is ReentrancyGuard, Ownable {
@@ -66,6 +69,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     error NoClaimableReward();
     error InvalidCoverDuration();
     error CoverNotAvailable();
+    error NameAlreadyExists();
     error InvalidAmount();
     error UnsupportedCoverType();
     error WrongPool();
@@ -98,6 +102,11 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         uint256 indexed poolId,
         uint256 amount
     );
+    event CoverUpdated(
+        uint256 indexed coverId,
+        string coverName,
+        CoverLib.RiskType riskType
+    );
 
     constructor(
         address _lpContract,
@@ -118,6 +127,12 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         uint256 _cost,
         uint256 _poolId
     ) public onlyOwner {
+        CoverLib.Cover[] memory coversInPool = lpContract.getPoolCovers(_poolId);
+        for (uint256 i = 0; i < coversInPool.length; i++) {
+            if (keccak256(abi.encodePacked(coversInPool[i].coverName)) == keccak256(abi.encodePacked(_coverName))) {
+                revert NameAlreadyExists();
+            }
+        }
         (, CoverLib.RiskType risk, , , uint256 tvl, , uint256 _percentageSplitBalance) = lpContract.getPool(_poolId);
 
         if (risk != _riskType || _capacity > _percentageSplitBalance) {
@@ -126,7 +141,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
 
         uint256 _maxAmount = tvl * (_capacity * 1e18 / 100) / 1e18;
 
-        lpContract.updatePercentageSplit(_poolId, _capacity);
+        lpContract.reducePercentageSplit(_poolId, _capacity);
 
         coverCount++;
         CoverLib.Cover memory cover =  CoverLib.Cover({
@@ -143,10 +158,66 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             CID: _cid
         });
         covers[coverCount] = cover;
-        lpContract.updatePoolCovers(_poolId, cover);
+        lpContract.addPoolCover(_poolId, cover);
         coverExists[coverCount] = true;
 
         emit CoverCreated(_coverName, _riskType);
+    }
+
+    function updateCover(
+        uint256 _coverId,
+        string memory _coverName, 
+        CoverLib.RiskType _riskType, 
+        string memory _cid,
+        string memory _chains,
+        uint256 _capacity,
+        uint256 _cost,
+        uint256 _poolId
+        ) public onlyOwner {
+        (, CoverLib.RiskType risk, , , uint256 tvl, , uint256 _percentageSplitBalance) = lpContract.getPool(_poolId);
+        
+        if (risk != _riskType || _capacity > _percentageSplitBalance) {
+            revert WrongPool();
+        }
+
+        CoverLib.Cover storage cover = covers[_coverId];
+
+        uint256 _maxAmount = tvl * (_capacity * 1e18 / 100) / 1e18;
+
+        if (cover.coverValues > _maxAmount) {
+            revert WrongPool();
+        }
+
+        CoverLib.Cover[] memory coversInPool = lpContract.getPoolCovers(_poolId);
+        for (uint256 i = 0; i < coversInPool.length; i++) {
+            if (keccak256(abi.encodePacked(coversInPool[i].coverName)) == keccak256(abi.encodePacked(_coverName)) &&
+                coversInPool[i].id != _coverId) {
+                revert NameAlreadyExists();
+            }
+        }
+
+        uint256 oldCoverCapacity = cover.capacity;
+
+        cover.coverName = _coverName;
+        cover.chains = _chains;
+        cover.capacity = _capacity;
+        cover.cost = _cost;
+        cover.CID = _cid;
+        cover.capacityAmount = _maxAmount;
+        cover.poolId = _poolId;
+        cover.maxAmount = _maxAmount - cover.coverValues;
+
+        if (oldCoverCapacity > _capacity) {
+            uint256 difference = oldCoverCapacity - _capacity;
+            lpContract.increasePercentageSplit(_poolId, difference);
+        } else if (oldCoverCapacity < _capacity) {
+            uint256 difference = _capacity - oldCoverCapacity;
+            lpContract.reducePercentageSplit(_poolId, difference);
+        }
+
+        lpContract.updatePoolCovers(_poolId, cover);
+
+        emit CoverUpdated(_coverId, _coverName, _riskType);
     }
 
     function purchaseCover(
@@ -193,6 +264,8 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             userCover.endDay += (userCover.coverPeriod * 1 days);
         }
 
+        coverFeeBalance += msg.value;
+
         emit CoverPurchased(msg.sender, _coverValue, msg.value, cover.riskType);
     }
 
@@ -237,6 +310,16 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     function updateUserCoverValue(address user, uint256 _coverId, uint256 _claimPaid) public onlyGovernance nonReentrant {
         userCovers[user][_coverId].coverValue -= _claimPaid;
         userCovers[user][_coverId].claimPaid += _claimPaid;
+    }
+
+    function deleteExpiredUserCovers(address _user) external nonReentrant {
+        for (uint256 i = 1; i <= coverCount; i++) {
+            CoverLib.GenericCoverInfo storage userCover = userCovers[_user][i];
+            if (userCover.isActive && block.timestamp > userCover.endDay) {
+                userCover.isActive = false;
+                delete userCovers[_user][i];
+            }
+        }
     }
 
     function updateMaxAmount(uint256 _coverId) public onlyPool nonReentrant {

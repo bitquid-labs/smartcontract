@@ -71,7 +71,8 @@ contract Governance is ReentrancyGuard, Ownable {
     enum ProposalStaus {
         Submitted, 
         Pending,
-        Executed,
+        Approved,
+        Claimed,
         Rejected
     }
 
@@ -151,7 +152,6 @@ contract Governance is ReentrancyGuard, Ownable {
 
         uint256 voterWeight = governanceToken.balanceOf(msg.sender);
         require(voterWeight > 0, "No voting weight");
-        require(governanceToken.transfer(msg.sender, 100000000000000000000), "Reward transfer failed");
 
         if (proposal.status == ProposalStaus.Submitted) {
             proposals[_proposalId].status = ProposalStaus.Pending;
@@ -192,7 +192,7 @@ contract Governance is ReentrancyGuard, Ownable {
             );
 
             if (proposal.status == ProposalStaus.Pending) {
-                proposals[_proposalId].status = ProposalStaus.Executed;
+                proposals[_proposalId].status = ProposalStaus.Approved;
             }
 
             coverContract.updateUserCoverValue(
@@ -208,6 +208,10 @@ contract Governance is ReentrancyGuard, Ownable {
             }
             emit ProposalExecuted(_proposalId, false);
         }
+    }
+
+    function updateProposalStatusToClaimed(uint256 proposalId) public nonReentrant {
+        proposals[proposalId].status = ProposalStaus.Claimed;
     }
 
     function setVotingDuration(uint256 _newDuration) external onlyOwner {
