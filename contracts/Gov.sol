@@ -71,7 +71,8 @@ contract Governance is ReentrancyGuard, Ownable {
     enum ProposalStaus {
         Submitted, 
         Pending,
-        Executed,
+        Approved,
+        Claimed,
         Rejected
     }
 
@@ -99,7 +100,8 @@ contract Governance is ReentrancyGuard, Ownable {
 
     IERC20 public governanceToken;
     ILP public lpContract;
-    ICover public coverContract;
+    ICover public ICoverContract;
+    address public coverContract;
 
     constructor(
         address _governanceToken,
@@ -151,7 +153,6 @@ contract Governance is ReentrancyGuard, Ownable {
 
         uint256 voterWeight = governanceToken.balanceOf(msg.sender);
         require(voterWeight > 0, "No voting weight");
-        require(governanceToken.transfer(msg.sender, 100000000000000000000), "Reward transfer failed");
 
         if (proposal.status == ProposalStaus.Submitted) {
             proposals[_proposalId].status = ProposalStaus.Pending;
@@ -192,10 +193,10 @@ contract Governance is ReentrancyGuard, Ownable {
             );
 
             if (proposal.status == ProposalStaus.Pending) {
-                proposals[_proposalId].status = ProposalStaus.Executed;
+                proposals[_proposalId].status = ProposalStaus.Approved;
             }
 
-            coverContract.updateUserCoverValue(
+            ICoverContract.updateUserCoverValue(
                 proposal.proposalParam.user,
                 proposal.proposalParam.coverId,
                 proposal.proposalParam.claimAmount
@@ -208,6 +209,10 @@ contract Governance is ReentrancyGuard, Ownable {
             }
             emit ProposalExecuted(_proposalId, false);
         }
+    }
+
+    function updateProposalStatusToClaimed(uint256 proposalId) public nonReentrant {
+        proposals[proposalId].status = ProposalStaus.Claimed;
     }
 
     function setVotingDuration(uint256 _newDuration) external onlyOwner {
@@ -230,11 +235,12 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function setCoverContract(address _coverContract) external onlyOwner {
-        require(_coverContract == address(0), "Governance already set");
+        require(coverContract == address(0), "Governance already set");
         require(
             _coverContract != address(0),
             "Governance address cannot be zero"
         );
-        coverContract = ICover(_coverContract);
+        ICoverContract = ICover(_coverContract);
+        coverContract = _coverContract;
     }
 }

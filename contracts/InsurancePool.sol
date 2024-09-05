@@ -10,6 +10,40 @@ interface ICover {
     function updateMaxAmount(uint256 _coverId) external ;
 }
 
+interface IGov {
+     struct ProposalParams {
+        address user;
+        CoverLib.RiskType riskType;
+        uint256 coverId;
+        string description;
+        uint256 poolId;
+        uint256 claimAmount;
+    }
+
+    struct Proposal {
+        uint256 id;
+        uint256 votesFor;
+        uint256 votesAgainst;
+        uint256 createdAt;
+        uint256 deadline;
+        ProposalStaus status;
+        bool executed;
+        ProposalParams proposalParam;
+    }
+
+    enum ProposalStaus {
+        Submitted, 
+        Pending,
+        Approved,
+        Claimed,
+        Rejected
+    }
+
+    function getProposalDetails(uint256 _proposalId) external returns (Proposal memory);
+    function updateProposalStatusToClaimed(uint256 proposalId) external ;
+
+}
+
 contract InsurancePool is ReentrancyGuard, Ownable {
     using CoverLib for *;
     error LpNotActive();
@@ -58,6 +92,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     uint256 public poolCount;
     address public governance;
     ICover public ICoverContract;
+    IGov public IGovernanceContract;
     address public coverContract;
     address public initialOwner;
 
@@ -106,8 +141,12 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         emit PoolUpdated(_poolId, _apy, _minPeriod);
     }
 
-    function updatePercentageSplit(uint256 _poolId,uint256 __poolPercentageSplit) public onlyCover {
+    function reducePercentageSplit(uint256 _poolId, uint256 __poolPercentageSplit) public onlyCover {
         pools[_poolId].percentageSplitBalance -= __poolPercentageSplit;
+    }
+
+    function increasePercentageSplit(uint256 _poolId, uint256 __poolPercentageSplit) public onlyCover {
+        pools[_poolId].percentageSplitBalance += __poolPercentageSplit;
     }
 
     function deactivatePool(uint256 _poolId) public onlyOwner {
@@ -165,6 +204,15 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     }
 
     function updatePoolCovers(uint256 _poolId, CoverLib.Cover memory _cover) public onlyCover {
+        for (uint i = 0; i < poolToCovers[_poolId].length; i++) {
+            if (poolToCovers[_poolId][i].id == _cover.id) {
+                poolToCovers[_poolId][i] = _cover;
+                break;
+            }
+        }
+    }
+
+    function addPoolCover(uint256 _poolId, CoverLib.Cover memory _cover) public onlyCover {
         poolToCovers[_poolId].push(_cover);
     }
 
@@ -272,27 +320,32 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         emit Deposited(msg.sender, msg.value, selectedPool.poolName);
     }
 
-    function payClaim(
-        uint256 poolId,
-        uint256 claimAmount,
-        address payable recipient
-    ) public onlyGovernance nonReentrant {
-        Pool storage pool = pools[poolId];
+    function claimProposalFunds(
+        uint256 _proposalId
+    ) public nonReentrant {
+        IGov.Proposal memory proposal = IGovernanceContract.getProposalDetails(_proposalId);
+        IGov.ProposalParams memory proposalParam = proposal.proposalParam;
+        require(proposal.status == IGov.ProposalStaus.Approved && proposal.executed, "Proposal not approved");
+        Pool storage pool = pools[proposalParam.poolId];
+        require(msg.sender == proposalParam.user,"Not a valid proposal");
         require(pool.isActive, "Pool is not active");
-        require(pool.tvl >= claimAmount, "Not enough funds in the pool");
+        require(pool.tvl >= proposalParam.claimAmount, "Not enough funds in the pool");
 
-        emit ClaimAttempt(poolId, claimAmount, recipient); // Add this line to debug
-
-        recipient.transfer(claimAmount);
-
-        pool.tcp += claimAmount;
-        pool.tvl -= claimAmount;
-        CoverLib.Cover[] memory poolCovers = getPoolCovers(poolId);
+        pool.tcp += proposalParam.claimAmount;
+        pool.tvl -= proposalParam.claimAmount;
+        CoverLib.Cover[] memory poolCovers = getPoolCovers(proposalParam.poolId);
         for (uint i = 0; i < poolCovers.length; i++) {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
         }
 
-        emit ClaimPaid(msg.sender, pool.poolName, claimAmount);
+        IGovernanceContract.updateProposalStatusToClaimed(_proposalId);
+
+        emit ClaimAttempt(proposalParam.poolId, proposalParam.claimAmount, proposalParam.user);
+
+        (bool success, ) = msg.sender.call{value: proposalParam.claimAmount}("");
+        require(success, "Transfer failed");
+
+        emit ClaimPaid(msg.sender, pool.poolName, proposalParam.claimAmount);
     }
 
     function getUserDeposit(
@@ -315,6 +368,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         require(governance == address(0), "Governance already set");
         require(_governance != address(0), "Governance address cannot be zero");
         governance = _governance;
+        IGovernanceContract = IGov(_governance);
     }
 
     function setCover(address _coverContract) external onlyOwner {
