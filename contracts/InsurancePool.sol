@@ -316,7 +316,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
 
     function claimProposalFunds(
         uint256 _proposalId
-    ) public onlyGovernance nonReentrant {
+    ) public nonReentrant {
         IGov.Proposal memory proposal = IGovernanceContract.getProposalDetails(_proposalId);
         IGov.ProposalParams memory proposalParam = proposal.proposalParam;
         require(proposal.status == IGov.ProposalStaus.Approved && proposal.executed, "Proposal not approved");
