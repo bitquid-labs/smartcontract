@@ -39,6 +39,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     // Define PoolInfo struct
     struct PoolInfo {
         string poolName;
+        uint256 poolId;
         uint256 apy;
         uint256 minPeriod;
         uint256 tvl;
@@ -150,6 +151,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             Pool storage pool = pools[i];
             result[i - 1] = PoolInfo({
                 poolName: pool.poolName,
+                poolId: i,
                 apy: pool.apy,
                 minPeriod: pool.minPeriod,
                 tvl: pool.tvl,
@@ -190,6 +192,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             if (pool.deposits[_userAddress].amount > 0) {
                 result[resultIndex++] = PoolInfo({
                     poolName: pool.poolName,
+                    poolId: i,
                     apy: pool.apy,
                     minPeriod: pool.minPeriod,
                     tvl: pool.tvl,
