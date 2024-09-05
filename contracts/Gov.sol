@@ -100,7 +100,8 @@ contract Governance is ReentrancyGuard, Ownable {
 
     IERC20 public governanceToken;
     ILP public lpContract;
-    ICover public coverContract;
+    ICover public ICoverContract;
+    address public coverContract;
 
     constructor(
         address _governanceToken,
@@ -195,7 +196,7 @@ contract Governance is ReentrancyGuard, Ownable {
                 proposals[_proposalId].status = ProposalStaus.Approved;
             }
 
-            coverContract.updateUserCoverValue(
+            ICoverContract.updateUserCoverValue(
                 proposal.proposalParam.user,
                 proposal.proposalParam.coverId,
                 proposal.proposalParam.claimAmount
@@ -234,11 +235,12 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function setCoverContract(address _coverContract) external onlyOwner {
-        require(_coverContract == address(0), "Governance already set");
+        require(coverContract == address(0), "Governance already set");
         require(
             _coverContract != address(0),
             "Governance address cannot be zero"
         );
-        coverContract = ICover(_coverContract);
+        ICoverContract = ICover(_coverContract);
+        coverContract = _coverContract;
     }
 }
