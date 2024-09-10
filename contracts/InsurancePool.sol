@@ -75,6 +75,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         string poolName;
         uint256 poolId;
         uint256 dailyPayout;
+        uint256 depositAmount;
         uint256 apy;
         uint256 minPeriod;
         uint256 tvl;
@@ -193,6 +194,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
                 poolName: pool.poolName,
                 poolId: i,
                 dailyPayout: pool.deposits[msg.sender].dailyPayout,
+                depositAmount: pool.deposits[msg.sender].amount,
                 apy: pool.apy,
                 minPeriod: pool.minPeriod,
                 tvl: pool.tvl,
@@ -244,6 +246,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
                     poolName: pool.poolName,
                     poolId: i,
                     dailyPayout: pool.deposits[_userAddress].dailyPayout,
+                    depositAmount: pool.deposits[msg.sender].amount,
                     apy: pool.apy,
                     minPeriod: pool.minPeriod,
                     tvl: pool.tvl,
