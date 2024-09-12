@@ -64,9 +64,10 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         address lp;
         uint256 amount;
         uint256 poolId;
-        uint256 period;
         uint256 dailyPayout;
         Status status;
+        uint256 daysLeft;
+        uint256 startDate;
         uint256 expiryDate;
     }
 
@@ -283,34 +284,30 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     }
 
     function deposit(
-        uint256 _poolId,
-        uint256 _period
+        uint256 _poolId
     ) public payable nonReentrant {
         Pool storage selectedPool = pools[_poolId];
 
         require(msg.value > 0, "Amount must be greater than 0");
         require(selectedPool.isActive, "Pool is inactive or does not exist");
-        require(
-            _period >= selectedPool.minPeriod,
-            "Deposit period is less than the minimum required"
-        );
 
         if (selectedPool.deposits[msg.sender].amount > 0) {
             uint256 amount = selectedPool.deposits[msg.sender].amount + msg.value;
             selectedPool.deposits[msg.sender].amount = amount;
-            selectedPool.deposits[msg.sender].period = _period;
-            selectedPool.deposits[msg.sender].expiryDate = block.timestamp + (_period * 1 days);
+            selectedPool.deposits[msg.sender].expiryDate = block.timestamp + (selectedPool.minPeriod * 1 days);
             selectedPool.deposits[msg.sender].dailyPayout = (amount * selectedPool.apy) / 100 / 365;
+            selectedPool.deposits[msg.sender].daysLeft = (selectedPool.minPeriod * 1 days) ;
         } else {
             uint256 dailyPayout = (msg.value * selectedPool.apy) / 100 / 365;
             selectedPool.deposits[msg.sender] = Deposits({
                 lp: msg.sender,
                 amount: msg.value,
                 poolId: _poolId,
-                period: _period,
                 dailyPayout: dailyPayout,
                 status: Status.Active,
-                expiryDate: block.timestamp + (_period * 1 days)
+                daysLeft: selectedPool.minPeriod,
+                startDate: block.timestamp,
+                expiryDate: block.timestamp + (selectedPool.minPeriod * 1 days)
             });
         }
 
@@ -355,7 +352,14 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         uint256 _poolId,
         address _user
     ) public view returns (Deposits memory) {
-        return pools[_poolId].deposits[_user];
+        Deposits memory userDeposit = pools[_poolId].deposits[_user];
+        if (userDeposit.expiryDate <= block.timestamp) {
+            userDeposit.daysLeft = 0;
+        } else {
+            uint256 timeLeft = userDeposit.expiryDate - block.timestamp;
+            userDeposit.daysLeft = (timeLeft + 1 days - 1) / 1 days; // Round up
+        }
+        return userDeposit;
     }
 
     function getPoolTVL(uint256 _poolId) public view returns (uint256) {

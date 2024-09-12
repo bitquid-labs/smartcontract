@@ -379,11 +379,6 @@
         "internalType": "uint256",
         "name": "_poolId",
         "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_period",
-        "type": "uint256"
       }
     ],
     "name": "deposit",
@@ -695,11 +690,6 @@
           },
           {
             "internalType": "uint256",
-            "name": "period",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
             "name": "dailyPayout",
             "type": "uint256"
           },
@@ -707,6 +697,16 @@
             "internalType": "enum InsurancePool.Status",
             "name": "status",
             "type": "uint8"
+          },
+          {
+            "internalType": "uint256",
+            "name": "daysLeft",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "startDate",
+            "type": "uint256"
           },
           {
             "internalType": "uint256",

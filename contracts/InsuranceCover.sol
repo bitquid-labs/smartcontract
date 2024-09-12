@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./CoverLib.sol";
 
 interface ILP {
@@ -11,9 +12,10 @@ interface ILP {
         address lp;
         uint256 amount;
         uint256 poolId;
-        uint256 period;
         uint256 dailyPayout;
         Status status;
+        uint256 daysLeft;
+        uint256 startDate;
         uint256 expiryDate;
     }
 
@@ -63,6 +65,7 @@ interface ILP {
 
 contract InsuranceCover is ReentrancyGuard, Ownable {
     using CoverLib for *;
+    using SafeMath for uint256;
 
     error LpNotActive();
     error InsufficientPoolBalance();
@@ -80,7 +83,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     address public governance;
 
     mapping(uint256 => bool) public coverExists;
-    mapping(address => uint256) public NextLpClaimTime;
+    mapping(address => mapping (uint256 => uint256)) public NextLpClaimTime;
 
     mapping(address => mapping(uint256 => CoverLib.GenericCoverInfo)) public userCovers;
     mapping(uint256 => CoverLib.Cover) public covers;
@@ -111,11 +114,11 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     constructor(
         address _lpContract,
         address _initialOwner,
-        address _governace
+        address _governance
     ) Ownable(_initialOwner) {
         lpContract = ILP(_lpContract);
         lpAddress = _lpContract;
-        governance = _governace;
+        governance = _governance;
     }
 
     function createCover(
@@ -240,8 +243,15 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             revert InsufficientPoolBalance();
         }
 
-        cover.capacityAmount -= _coverValue;
-        cover.coverValues += _coverValue;
+        uint256 newCoverValues = cover.coverValues.add(_coverValue);
+
+        if (newCoverValues > cover.capacityAmount) {
+            revert InsufficientPoolBalance();
+        }
+
+        cover.coverValues = newCoverValues;
+        cover.maxAmount = cover.capacityAmount.sub(newCoverValues);
+
         cover.maxAmount = (cover.capacityAmount - cover.coverValues);
         CoverLib.GenericCoverInfo storage userCover = userCovers[msg.sender][_coverId];
         
@@ -338,8 +348,19 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             revert LpNotActive();
         }
         
-        uint256 lastClaimTime = NextLpClaimTime[msg.sender];
-        uint256 claimableDays = (block.timestamp - lastClaimTime) / 1 days;
+        uint256 lastClaimTime;
+        if (NextLpClaimTime[msg.sender][_poolId] == 0) {
+            lastClaimTime = depositInfo.startDate;
+        } else {
+            lastClaimTime = NextLpClaimTime[msg.sender][_poolId];
+        }
+
+        uint256 currentTime = block.timestamp;
+        if (currentTime > depositInfo.expiryDate) {
+            currentTime = depositInfo.expiryDate;
+        }
+
+        uint256 claimableDays = (currentTime - lastClaimTime) / 1 days;
 
         if (claimableDays <= 0) {
             revert NoClaimableReward();
@@ -349,7 +370,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         if (claimableAmount > coverFeeBalance) {
             revert InsufficientPoolBalance();
         }
-        NextLpClaimTime[msg.sender] = block.timestamp;
+        NextLpClaimTime[msg.sender][_poolId] = block.timestamp;
 
         (bool success, ) = msg.sender.call{value: claimableAmount}("");
         require(success, "Transfer failed");
