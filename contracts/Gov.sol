@@ -111,7 +111,7 @@ contract Governance is ReentrancyGuard, Ownable {
     ) Ownable(_initialOwner) {
         governanceToken = IERC20(_governanceToken);
         lpContract = ILP(_insurancePool);
-        votingDuration = _votingDuration * 1 days;
+        votingDuration = _votingDuration * 1 minutes;
     }
 
     function createProposal(ProposalParams memory params) external {
@@ -175,6 +175,7 @@ contract Governance is ReentrancyGuard, Ownable {
 
     function executeProposal(uint256 _proposalId) external onlyOwner nonReentrant {
         Proposal storage proposal = proposals[_proposalId];
+        require(proposal.status == ProposalStaus.Pending, "Proposal not pending");
         require(
             block.timestamp > proposal.deadline,
             "Voting period is still active"
@@ -192,9 +193,7 @@ contract Governance is ReentrancyGuard, Ownable {
                 "Error Claiming pay"
             );
 
-            if (proposal.status == ProposalStaus.Pending) {
-                proposals[_proposalId].status = ProposalStaus.Approved;
-            }
+            proposals[_proposalId].status = ProposalStaus.Approved;
 
             ICoverContract.updateUserCoverValue(
                 proposal.proposalParam.user,
@@ -204,20 +203,23 @@ contract Governance is ReentrancyGuard, Ownable {
 
             emit ProposalExecuted(_proposalId, true);
         } else {
-            if (proposal.status == ProposalStaus.Pending) {
-                proposals[_proposalId].status = ProposalStaus.Rejected;
-            }
+            proposals[_proposalId].status = ProposalStaus.Rejected;
             emit ProposalExecuted(_proposalId, false);
         }
     }
 
     function updateProposalStatusToClaimed(uint256 proposalId) public nonReentrant {
+        require(msg.sender == proposals[proposalId].proposalParam.user, "Not the valid proposer");
         proposals[proposalId].status = ProposalStaus.Claimed;
     }
 
     function setVotingDuration(uint256 _newDuration) external onlyOwner {
         require(_newDuration > 0, "Voting duration must be greater than 0");
         votingDuration = _newDuration;
+    }
+
+    function getProposalCount() public view returns (uint256) {
+        return proposalCounter;
     }
 
     function getProposalDetails(
