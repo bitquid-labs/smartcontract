@@ -39,7 +39,7 @@ interface IGov {
         Rejected
     }
 
-    function getProposalDetails(uint256 _proposalId) external returns (Proposal memory);
+    function getProposalDetails(uint256 _proposalId) external view returns (Proposal memory);
     function updateProposalStatusToClaimed(uint256 proposalId) external ;
 
 }
@@ -318,6 +318,13 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         }
 
         emit Deposited(msg.sender, msg.value, selectedPool.poolName);
+    }
+
+    function getDetails(uint256 _proposalId) public view returns (address, address) {
+        IGov.Proposal memory proposal = IGovernanceContract.getProposalDetails(_proposalId);
+        IGov.ProposalParams memory proposalParam = proposal.proposalParam;
+
+        return (msg.sender, proposalParam.user);
     }
 
     function claimProposalFunds(

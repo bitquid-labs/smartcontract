@@ -482,6 +482,19 @@
   },
   {
     "inputs": [],
+    "name": "poolContract",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "proposalCounter",
     "outputs": [
       {

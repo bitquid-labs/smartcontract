@@ -102,6 +102,7 @@ contract Governance is ReentrancyGuard, Ownable {
     ILP public lpContract;
     ICover public ICoverContract;
     address public coverContract;
+    address public poolContract;
 
     constructor(
         address _governanceToken,
@@ -111,6 +112,7 @@ contract Governance is ReentrancyGuard, Ownable {
     ) Ownable(_initialOwner) {
         governanceToken = IERC20(_governanceToken);
         lpContract = ILP(_insurancePool);
+        poolContract = _insurancePool;
         votingDuration = _votingDuration * 1 minutes;
     }
 
@@ -125,7 +127,7 @@ contract Governance is ReentrancyGuard, Ownable {
             votesFor: 0,
             votesAgainst: 0,
             createdAt: block.timestamp,
-            deadline: block.timestamp + votingDuration,
+            deadline: 0,
             executed: false,
             status: ProposalStaus.Submitted,
             proposalParam: params
@@ -144,19 +146,22 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function vote(uint256 _proposalId, bool _vote) external {
-        Proposal storage proposal = proposals[_proposalId];
-        require(
-            block.timestamp <= proposal.deadline,
-            "Voting period has ended"
-        );
         require(!voters[_proposalId][msg.sender].voted, "Already voted");
+        Proposal storage proposal = proposals[_proposalId];
+        require(proposal.createdAt != 0, "Proposal does not exist");
+        
+        if (proposal.status == ProposalStaus.Submitted) {
+            proposal.status = ProposalStaus.Pending;
+            proposal.deadline = block.timestamp + votingDuration;
+        } else {
+            require(
+                block.timestamp <= proposal.deadline,
+                "Voting period has ended"
+            );
+        }
 
         uint256 voterWeight = governanceToken.balanceOf(msg.sender);
         require(voterWeight > 0, "No voting weight");
-
-        if (proposal.status == ProposalStaus.Submitted) {
-            proposals[_proposalId].status = ProposalStaus.Pending;
-        }
 
         voters[_proposalId][msg.sender] = Voter({
             voted: true,
@@ -184,14 +189,6 @@ contract Governance is ReentrancyGuard, Ownable {
         proposal.executed = true;
 
         if (proposal.votesFor > proposal.votesAgainst) {
-            require(
-                lpContract.payClaim(
-                    proposal.proposalParam.poolId,
-                    proposal.proposalParam.claimAmount,
-                    proposal.proposalParam.user
-                ),
-                "Error Claiming pay"
-            );
 
             proposals[_proposalId].status = ProposalStaus.Approved;
 
@@ -209,7 +206,7 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function updateProposalStatusToClaimed(uint256 proposalId) public nonReentrant {
-        require(msg.sender == proposals[proposalId].proposalParam.user, "Not the valid proposer");
+        require(msg.sender == proposals[proposalId].proposalParam.user || msg.sender == poolContract, "Not the valid proposer");
         proposals[proposalId].status = ProposalStaus.Claimed;
     }
 
