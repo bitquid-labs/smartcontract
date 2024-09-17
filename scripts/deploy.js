@@ -5,6 +5,7 @@ const DECIMALS = 18;
 const INITIAL_SUPPLY = 2000000000;
 const NAME = "BitQuid";
 const SYMBOL = "BQ";
+const bitcoinplusGovToken = "0xb650bedaAAf173366D59d8ef74f571aCAFA0a6f1";
 
 async function main() {
   console.log("Starting deployment script");
@@ -23,7 +24,7 @@ async function main() {
 
     const Governance = await ethers.getContractFactory("Governance");
     const governance = await Governance.deploy(
-      tokenAddress,
+      bitcoinplusGovToken,
       poolAddress,
       5,
       OWNER
