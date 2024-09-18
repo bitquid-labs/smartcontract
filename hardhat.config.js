@@ -1,11 +1,15 @@
 require("@nomicfoundation/hardhat-toolbox");
+<<<<<<< HEAD
 require("dotenv").config();
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
+=======
+>>>>>>> master
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: "0.8.24",
+<<<<<<< HEAD
   networks: {
     bitcoinplus: {
       url: "https://bitcoinplus.pwrlabs.io/",
@@ -40,4 +44,6 @@ module.exports = {
       accounts: [PRIVATE_KEY],
     },
   },
+=======
+>>>>>>> master
 };
