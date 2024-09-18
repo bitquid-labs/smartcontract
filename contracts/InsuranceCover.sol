@@ -394,7 +394,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     modifier onlyGovernance() {
         require(msg.sender == governance, "Not authorized");
         _;
-    }    
+    }
 
     modifier onlyPool() {
         require(msg.sender == lpAddress, "Not authorized");
