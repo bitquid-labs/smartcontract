@@ -336,6 +336,11 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         return coverFeeBalance;
     }
 
+    function increaseCoverFeeBalance() public payable onlyOwner nonReentrant {
+        require(msg.value > 0, "Value must be greater than 0");
+        coverFeeBalance += msg.value;
+    }
+
     function updateMaxAmount(uint256 _coverId) public onlyPool nonReentrant {
         CoverLib.Cover storage cover = covers[_coverId];
         (, , , , uint256 tvl, , ) = lpContract.getPool(cover.poolId);
@@ -389,7 +394,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     modifier onlyGovernance() {
         require(msg.sender == governance, "Not authorized");
         _;
-    }
+    }    
 
     modifier onlyPool() {
         require(msg.sender == lpAddress, "Not authorized");
