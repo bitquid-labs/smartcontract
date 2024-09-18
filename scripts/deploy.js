@@ -24,7 +24,7 @@ async function main() {
 
     const Governance = await ethers.getContractFactory("Governance");
     const governance = await Governance.deploy(
-      bitcoinplusGovToken,
+      tokenAddress,
       poolAddress,
       5,
       OWNER

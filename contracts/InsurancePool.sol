@@ -11,10 +11,11 @@ interface ICover {
 }
 
 interface IGov {
-     struct ProposalParams {
+    struct ProposalParams {
         address user;
         CoverLib.RiskType riskType;
         uint256 coverId;
+        string txHash;
         string description;
         uint256 poolId;
         uint256 claimAmount;
@@ -26,6 +27,7 @@ interface IGov {
         uint256 votesAgainst;
         uint256 createdAt;
         uint256 deadline;
+        uint256 timeleft;
         ProposalStaus status;
         bool executed;
         ProposalParams proposalParam;
@@ -39,7 +41,7 @@ interface IGov {
         Rejected
     }
 
-    function getProposalDetails(uint256 _proposalId) external view returns (Proposal memory);
+    function getProposalDetails(uint256 _proposalId) external returns (Proposal memory);
     function updateProposalStatusToClaimed(uint256 proposalId) external ;
 
 }
@@ -318,13 +320,6 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         }
 
         emit Deposited(msg.sender, msg.value, selectedPool.poolName);
-    }
-
-    function getDetails(uint256 _proposalId) public view returns (address, address) {
-        IGov.Proposal memory proposal = IGovernanceContract.getProposalDetails(_proposalId);
-        IGov.ProposalParams memory proposalParam = proposal.proposalParam;
-
-        return (msg.sender, proposalParam.user);
     }
 
     function claimProposalFunds(

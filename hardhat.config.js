@@ -35,5 +35,9 @@ module.exports = {
       url: "localhost:8545",
       accounts: [PRIVATE_KEY],
     },
+    zulu: {
+      url: "https://rpc-testnet.zulunetwork.io/",
+      accounts: [PRIVATE_KEY],
+    },
   },
 };

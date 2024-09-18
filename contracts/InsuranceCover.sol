@@ -364,7 +364,9 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             currentTime = depositInfo.expiryDate;
         }
 
-        uint256 claimableDays = (currentTime - lastClaimTime) / 1 days;
+        // uint256 claimableDays = (currentTime - lastClaimTime) / 1 days;   Uncomment
+
+        uint256 claimableDays = (currentTime - lastClaimTime) / 5 minutes;
 
         if (claimableDays <= 0) {
             revert NoClaimableReward();

@@ -53,6 +53,11 @@
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "VotingTimeElapsed",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -211,6 +216,11 @@
           },
           {
             "internalType": "string",
+            "name": "txHash",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
             "name": "description",
             "type": "string"
           },
@@ -280,6 +290,11 @@
             "type": "uint256"
           },
           {
+            "internalType": "uint256",
+            "name": "timeleft",
+            "type": "uint256"
+          },
+          {
             "internalType": "enum Governance.ProposalStaus",
             "name": "status",
             "type": "uint8"
@@ -305,6 +320,11 @@
                 "internalType": "uint256",
                 "name": "coverId",
                 "type": "uint256"
+              },
+              {
+                "internalType": "string",
+                "name": "txHash",
+                "type": "string"
               },
               {
                 "internalType": "string",
@@ -386,6 +406,11 @@
             "type": "uint256"
           },
           {
+            "internalType": "uint256",
+            "name": "timeleft",
+            "type": "uint256"
+          },
+          {
             "internalType": "enum Governance.ProposalStaus",
             "name": "status",
             "type": "uint8"
@@ -414,6 +439,11 @@
               },
               {
                 "internalType": "string",
+                "name": "txHash",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
                 "name": "description",
                 "type": "string"
               },
@@ -438,7 +468,7 @@
         "type": "tuple"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -561,6 +591,11 @@
         "type": "uint256"
       },
       {
+        "internalType": "uint256",
+        "name": "timeleft",
+        "type": "uint256"
+      },
+      {
         "internalType": "enum Governance.ProposalStaus",
         "name": "status",
         "type": "uint8"
@@ -586,6 +621,11 @@
             "internalType": "uint256",
             "name": "coverId",
             "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "txHash",
+            "type": "string"
           },
           {
             "internalType": "string",
