@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./CoverLib.sol";
 
 interface ILP {
@@ -65,7 +65,7 @@ interface ILP {
 
 contract InsuranceCover is ReentrancyGuard, Ownable {
     using CoverLib for *;
-    using SafeMath for uint256;
+    using Math for uint256;
 
     error LpNotActive();
     error InsufficientPoolBalance();
@@ -243,14 +243,14 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             revert InsufficientPoolBalance();
         }
 
-        uint256 newCoverValues = cover.coverValues.add(_coverValue);
+        uint256 newCoverValues = cover.coverValues + _coverValue;
 
         if (newCoverValues > cover.capacityAmount) {
             revert InsufficientPoolBalance();
         }
 
         cover.coverValues = newCoverValues;
-        cover.maxAmount = cover.capacityAmount.sub(newCoverValues);
+        cover.maxAmount = cover.capacityAmount - newCoverValues;
 
         cover.maxAmount = (cover.capacityAmount - cover.coverValues);
         CoverLib.GenericCoverInfo storage userCover = userCovers[msg.sender][_coverId];
@@ -332,6 +332,15 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         }
     }
 
+    function getCoverFeeBalance() external view returns (uint256) {
+        return coverFeeBalance;
+    }
+
+    function increaseCoverFeeBalance() public payable onlyOwner nonReentrant {
+        require(msg.value > 0, "Value must be greater than 0");
+        coverFeeBalance += msg.value;
+    }
+
     function updateMaxAmount(uint256 _coverId) public onlyPool nonReentrant {
         CoverLib.Cover storage cover = covers[_coverId];
         (, , , , uint256 tvl, , ) = lpContract.getPool(cover.poolId);
@@ -360,7 +369,9 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             currentTime = depositInfo.expiryDate;
         }
 
-        uint256 claimableDays = (currentTime - lastClaimTime) / 1 days;
+        // uint256 claimableDays = (currentTime - lastClaimTime) / 1 days;   Uncomment
+
+        uint256 claimableDays = (currentTime - lastClaimTime) / 5 minutes;
 
         if (claimableDays <= 0) {
             revert NoClaimableReward();

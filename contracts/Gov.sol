@@ -42,12 +42,14 @@ interface ICover {
 }
 
 contract Governance is ReentrancyGuard, Ownable {
+    error VotingTimeElapsed();
     struct Proposal {
         uint256 id;
         uint256 votesFor;
         uint256 votesAgainst;
         uint256 createdAt;
         uint256 deadline;
+        uint256 timeleft;
         ProposalStaus status;
         bool executed;
         ProposalParams proposalParam;
@@ -63,6 +65,7 @@ contract Governance is ReentrancyGuard, Ownable {
         address user;
         CoverLib.RiskType riskType;
         uint256 coverId;
+        string txHash;
         string description;
         uint256 poolId;
         uint256 claimAmount;
@@ -80,7 +83,7 @@ contract Governance is ReentrancyGuard, Ownable {
     uint256 public votingDuration;
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => mapping(address => Voter)) public voters;
-    uint256[] public proposalIds; // Array to track proposal IDs
+    uint256[] public proposalIds;
 
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -128,6 +131,7 @@ contract Governance is ReentrancyGuard, Ownable {
             votesAgainst: 0,
             createdAt: block.timestamp,
             deadline: 0,
+            timeleft: 0,
             executed: false,
             status: ProposalStaus.Submitted,
             proposalParam: params
@@ -153,13 +157,13 @@ contract Governance is ReentrancyGuard, Ownable {
         if (proposal.status == ProposalStaus.Submitted) {
             proposal.status = ProposalStaus.Pending;
             proposal.deadline = block.timestamp + votingDuration;
-        } else {
-            require(
-                block.timestamp <= proposal.deadline,
-                "Voting period has ended"
-            );
+            proposal.timeleft = (proposal.deadline - block.timestamp) * 1 minutes;
+        } else if (block.timestamp >= proposal.deadline) {
+            proposal.timeleft = 0;
+            revert VotingTimeElapsed();
         }
 
+        proposal.timeleft = (proposal.deadline - block.timestamp) * 1 minutes;
         uint256 voterWeight = governanceToken.balanceOf(msg.sender);
         require(voterWeight > 0, "No voting weight");
 
@@ -221,7 +225,12 @@ contract Governance is ReentrancyGuard, Ownable {
 
     function getProposalDetails(
         uint256 _proposalId
-    ) external view returns (Proposal memory) {
+    ) external returns (Proposal memory) {
+        if (block.timestamp >= proposals[_proposalId].deadline) {
+            proposals[_proposalId].timeleft = 0;
+        } else {
+            proposals[_proposalId].timeleft = (proposals[_proposalId].deadline - block.timestamp) * 1 minutes;
+        }
         return proposals[_proposalId];
     }
 
