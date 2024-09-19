@@ -157,13 +157,13 @@ contract Governance is ReentrancyGuard, Ownable {
         if (proposal.status == ProposalStaus.Submitted) {
             proposal.status = ProposalStaus.Pending;
             proposal.deadline = block.timestamp + votingDuration;
-            proposal.timeleft = (proposal.deadline - block.timestamp) * 1 minutes;
+            proposal.timeleft = (proposal.deadline - block.timestamp) / 1 minutes;
         } else if (block.timestamp >= proposal.deadline) {
             proposal.timeleft = 0;
             revert VotingTimeElapsed();
         }
 
-        proposal.timeleft = (proposal.deadline - block.timestamp) * 1 minutes;
+        proposal.timeleft = (proposal.deadline - block.timestamp) / 1 minutes;
         uint256 voterWeight = governanceToken.balanceOf(msg.sender);
         require(voterWeight > 0, "No voting weight");
 
@@ -229,7 +229,7 @@ contract Governance is ReentrancyGuard, Ownable {
         if (block.timestamp >= proposals[_proposalId].deadline) {
             proposals[_proposalId].timeleft = 0;
         } else {
-            proposals[_proposalId].timeleft = (proposals[_proposalId].deadline - block.timestamp) * 1 minutes;
+            proposals[_proposalId].timeleft = (proposals[_proposalId].deadline - block.timestamp) / 1 minutes;
         }
         return proposals[_proposalId];
     }
