@@ -39,5 +39,9 @@ module.exports = {
       url: "https://rpc-testnet.zulunetwork.io/",
       accounts: [PRIVATE_KEY],
     },
+    rootstock: {
+      url: "https://rpc.testnet.rootstock.io/0xmYpavxwaSj27BhDo1j5rzrLEd8Gt-T",
+      accounts: [PRIVATE_KEY],
+    },
   },
 };

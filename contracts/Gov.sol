@@ -10,13 +10,13 @@ interface ILP {
     struct Deposits {
         address lp;
         uint256 amount;
-        string category;
-        uint256 apy;
-        string pool;
-        uint256 period;
-        uint dailyPayout;
+        uint256 poolId;
+        uint256 dailyPayout;
         Status status;
+        uint256 daysLeft;
+        uint256 startDate;
         uint256 expiryDate;
+        uint256 accruedPayout;
     }
 
     enum Status {

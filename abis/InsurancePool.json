@@ -398,19 +398,9 @@
             "type": "string"
           },
           {
-            "internalType": "uint256",
-            "name": "poolId",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "dailyPayout",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "depositAmount",
-            "type": "uint256"
+            "internalType": "enum CoverLib.RiskType",
+            "name": "riskType",
+            "type": "uint8"
           },
           {
             "internalType": "uint256",
@@ -436,9 +426,14 @@
             "internalType": "bool",
             "name": "isActive",
             "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "percentageSplitBalance",
+            "type": "uint256"
           }
         ],
-        "internalType": "struct InsurancePool.PoolInfo[]",
+        "internalType": "struct InsurancePool.NPool[]",
         "name": "",
         "type": "tuple[]"
       }
@@ -711,6 +706,11 @@
           {
             "internalType": "uint256",
             "name": "expiryDate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "accruedPayout",
             "type": "uint256"
           }
         ],
