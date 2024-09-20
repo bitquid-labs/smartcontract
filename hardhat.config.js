@@ -43,5 +43,9 @@ module.exports = {
       url: "https://rpc.testnet.rootstock.io/0xmYpavxwaSj27BhDo1j5rzrLEd8Gt-T",
       accounts: [PRIVATE_KEY],
     },
+    sepolia: {
+      url: "https://eth-sepolia.g.alchemy.com/v2/VtFb4uQ7Vc5l414EGwXDDzcSClkHv9TY",
+      accounts: [PRIVATE_KEY],
+    },
   },
 };

@@ -2,10 +2,9 @@ const { ethers } = require("hardhat");
 
 const OWNER = "0xDA01D79Ca36b493C7906F3C032D2365Fb3470aEC";
 const DECIMALS = 18;
-const INITIAL_SUPPLY = 2000000000;
+const INITIAL_SUPPLY = 200000000000000;
 const NAME = "BitQuid";
 const SYMBOL = "BQ";
-const bitcoinplusGovToken = "0xb650bedaAAf173366D59d8ef74f571aCAFA0a6f1";
 
 async function main() {
   console.log("Starting deployment script");
@@ -24,7 +23,7 @@ async function main() {
 
     const Governance = await ethers.getContractFactory("Governance");
     const governance = await Governance.deploy(
-      bitcoinplusGovToken,
+      tokenAddress,
       poolAddress,
       5,
       OWNER
