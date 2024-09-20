@@ -8,6 +8,7 @@ import "./CoverLib.sol";
 
 interface ICover {
     function updateMaxAmount(uint256 _coverId) external ;
+    function getDepositClaimableDays(address user, uint256 _poolId) external view returns (uint256);
 }
 
 interface IGov {
@@ -62,6 +63,17 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         mapping(address => Deposits) deposits; // Mapping of user address to their deposit
     }
 
+    struct NPool {
+        string poolName;
+        CoverLib.RiskType riskType;
+        uint256 apy;
+        uint256 minPeriod;
+        uint256 tvl;
+        uint256 tcp; // Total claim paid to users
+        bool isActive; // Pool status to handle soft deletion
+        uint256 percentageSplitBalance;
+    }
+
     struct Deposits {
         address lp;
         uint256 amount;
@@ -71,6 +83,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         uint256 daysLeft;
         uint256 startDate;
         uint256 expiryDate;
+        uint256 accruedPayout;
     }
 
     // Define PoolInfo struct
@@ -187,22 +200,19 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         );
     }
 
-    // Function to get all pools
-    function getAllPools() public view returns (PoolInfo[] memory) {
-        PoolInfo[] memory result = new PoolInfo[](poolCount);
-
+    function getAllPools() public view returns (NPool[] memory) {
+        NPool[] memory result = new NPool[](poolCount);
         for (uint256 i = 1; i <= poolCount; i++) {
             Pool storage pool = pools[i];
-            result[i - 1] = PoolInfo({
+            result[i - 1] = NPool({
                 poolName: pool.poolName,
-                poolId: i,
-                dailyPayout: pool.deposits[msg.sender].dailyPayout,
-                depositAmount: pool.deposits[msg.sender].amount,
+                riskType: pool.riskType,
                 apy: pool.apy,
                 minPeriod: pool.minPeriod,
                 tvl: pool.tvl,
                 tcp: pool.tcp,
-                isActive: pool.isActive
+                isActive: pool.isActive,
+                percentageSplitBalance: pool.percentageSplitBalance
             });
         }
         return result;
@@ -309,7 +319,8 @@ contract InsurancePool is ReentrancyGuard, Ownable {
                 status: Status.Active,
                 daysLeft: selectedPool.minPeriod,
                 startDate: block.timestamp,
-                expiryDate: block.timestamp + (selectedPool.minPeriod * 1 days)
+                expiryDate: block.timestamp + (selectedPool.minPeriod * 1 minutes),
+                accruedPayout: 0
             });
         }
 
@@ -355,6 +366,8 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         address _user
     ) public view returns (Deposits memory) {
         Deposits memory userDeposit = pools[_poolId].deposits[_user];
+        uint256 claimableDays = ICoverContract.getDepositClaimableDays(_user, _poolId);
+        userDeposit.accruedPayout = userDeposit.dailyPayout * claimableDays;
         if (userDeposit.expiryDate <= block.timestamp) {
             userDeposit.daysLeft = 0;
         } else {

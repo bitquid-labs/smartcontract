@@ -17,7 +17,9 @@ interface ILP {
         uint256 daysLeft;
         uint256 startDate;
         uint256 expiryDate;
+        uint256 accruedPayout;
     }
+
 
     struct Pool {
         string poolName;
@@ -389,6 +391,24 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         coverFeeBalance -= claimableAmount;
 
         emit PayoutClaimed(msg.sender, _poolId, claimableAmount);
+    }
+
+    function getDepositClaimableDays(address user, uint256 _poolId) public view returns (uint256) {
+        ILP.Deposits memory depositInfo = lpContract.getUserDeposit(_poolId, user);
+
+        uint256 lastClaimTime;
+        if (NextLpClaimTime[msg.sender][_poolId] == 0) {
+            lastClaimTime = depositInfo.startDate;
+        } else {
+            lastClaimTime = NextLpClaimTime[msg.sender][_poolId];
+        }
+        uint256 currentTime = block.timestamp;
+        if (currentTime > depositInfo.expiryDate) {
+            currentTime = depositInfo.expiryDate;
+        }
+        uint256 claimableDays = (currentTime - lastClaimTime) / 5 minutes;
+
+        return claimableDays;
     }
 
     modifier onlyGovernance() {
