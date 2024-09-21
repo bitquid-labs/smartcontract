@@ -86,7 +86,6 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         uint256 accruedPayout;
     }
 
-    // Define PoolInfo struct
     struct PoolInfo {
         string poolName;
         uint256 poolId;
@@ -97,6 +96,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         uint256 tvl;
         uint256 tcp; // Total claim paid to users
         bool isActive; // Pool status to handle soft deletion
+        uint256 accruedPayout;
     }
 
     enum Status {
@@ -254,6 +254,9 @@ contract InsurancePool is ReentrancyGuard, Ownable {
 
         for (uint256 i = 1; i <= poolCount; i++) {
             Pool storage pool = pools[i];
+            Deposits memory userDeposit = pools[i].deposits[_userAddress];
+            uint256 claimableDays = ICoverContract.getDepositClaimableDays(_userAddress, i);
+            uint256 accruedPayout = userDeposit.dailyPayout * claimableDays;
             if (pool.deposits[_userAddress].amount > 0) {
                 result[resultIndex++] = PoolInfo({
                     poolName: pool.poolName,
@@ -264,7 +267,8 @@ contract InsurancePool is ReentrancyGuard, Ownable {
                     minPeriod: pool.minPeriod,
                     tvl: pool.tvl,
                     tcp: pool.tcp,
-                    isActive: pool.isActive
+                    isActive: pool.isActive,
+                    accruedPayout: accruedPayout
                 });
             }
         }

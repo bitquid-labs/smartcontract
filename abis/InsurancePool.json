@@ -641,6 +641,11 @@
             "internalType": "bool",
             "name": "isActive",
             "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "accruedPayout",
+            "type": "uint256"
           }
         ],
         "internalType": "struct InsurancePool.PoolInfo[]",
