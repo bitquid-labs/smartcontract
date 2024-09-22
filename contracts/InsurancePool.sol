@@ -9,6 +9,7 @@ import "./CoverLib.sol";
 interface ICover {
     function updateMaxAmount(uint256 _coverId) external ;
     function getDepositClaimableDays(address user, uint256 _poolId) external view returns (uint256);
+    function getLastClaimTime(address user, uint256 _poolId) external view returns (uint256);
 }
 
 interface IGov {
@@ -370,7 +371,18 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         address _user
     ) public view returns (Deposits memory) {
         Deposits memory userDeposit = pools[_poolId].deposits[_user];
-        uint256 claimableDays = ICoverContract.getDepositClaimableDays(_user, _poolId);
+        uint256 claimTime = ICoverContract.getLastClaimTime(_user, _poolId);
+        uint lastClaimTime;
+        if (claimTime == 0) {
+            lastClaimTime = userDeposit.startDate;
+        } else {
+            lastClaimTime = claimTime;
+        }
+        uint256 currentTime = block.timestamp;
+        if (currentTime > userDeposit.expiryDate) {
+            currentTime = userDeposit.expiryDate;
+        }
+        uint256 claimableDays = (currentTime - lastClaimTime) / 5 minutes;
         userDeposit.accruedPayout = userDeposit.dailyPayout * claimableDays;
         if (userDeposit.expiryDate <= block.timestamp) {
             userDeposit.daysLeft = 0;

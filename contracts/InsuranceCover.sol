@@ -397,10 +397,10 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         ILP.Deposits memory depositInfo = lpContract.getUserDeposit(_poolId, user);
 
         uint256 lastClaimTime;
-        if (NextLpClaimTime[msg.sender][_poolId] == 0) {
+        if (NextLpClaimTime[user][_poolId] == 0) {
             lastClaimTime = depositInfo.startDate;
         } else {
-            lastClaimTime = NextLpClaimTime[msg.sender][_poolId];
+            lastClaimTime = NextLpClaimTime[user][_poolId];
         }
         uint256 currentTime = block.timestamp;
         if (currentTime > depositInfo.expiryDate) {
@@ -410,6 +410,10 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
 
         return claimableDays;
     }
+
+    function getLastClaimTime(address user, uint256 _poolId)public view returns (uint256) {
+        return NextLpClaimTime[user][_poolId];
+    } 
 
     modifier onlyGovernance() {
         require(msg.sender == governance, "Not authorized");
