@@ -260,7 +260,201 @@
   },
   {
     "inputs": [],
+    "name": "getActiveProposals",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "id",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "votesFor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "votesAgainst",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "createdAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "deadline",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timeleft",
+            "type": "uint256"
+          },
+          {
+            "internalType": "enum Governance.ProposalStaus",
+            "name": "status",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "executed",
+            "type": "bool"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+              },
+              {
+                "internalType": "enum CoverLib.RiskType",
+                "name": "riskType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "coverId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "string",
+                "name": "txHash",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "description",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "claimAmount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct Governance.ProposalParams",
+            "name": "proposalParam",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct Governance.Proposal[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "getAllProposals",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "id",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "votesFor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "votesAgainst",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "createdAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "deadline",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timeleft",
+            "type": "uint256"
+          },
+          {
+            "internalType": "enum Governance.ProposalStaus",
+            "name": "status",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bool",
+            "name": "executed",
+            "type": "bool"
+          },
+          {
+            "components": [
+              {
+                "internalType": "address",
+                "name": "user",
+                "type": "address"
+              },
+              {
+                "internalType": "enum CoverLib.RiskType",
+                "name": "riskType",
+                "type": "uint8"
+              },
+              {
+                "internalType": "uint256",
+                "name": "coverId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "string",
+                "name": "txHash",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "description",
+                "type": "string"
+              },
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "claimAmount",
+                "type": "uint256"
+              }
+            ],
+            "internalType": "struct Governance.ProposalParams",
+            "name": "proposalParam",
+            "type": "tuple"
+          }
+        ],
+        "internalType": "struct Governance.Proposal[]",
+        "name": "",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getPastProposals",
     "outputs": [
       {
         "components": [
