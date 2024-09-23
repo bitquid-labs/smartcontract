@@ -238,6 +238,11 @@ contract Governance is ReentrancyGuard, Ownable {
         Proposal[] memory result = new Proposal[](proposalIds.length);
         for (uint256 i = 0; i < proposalIds.length; i++) {
             result[i] = proposals[proposalIds[i]];
+            if (block.timestamp >= result[i].deadline) {
+                result[i].timeleft = 0;
+            } else {
+                result[i].timeleft = (result[i].deadline - block.timestamp) / 1 minutes;
+            }
         }
         return result;
     }
