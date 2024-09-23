@@ -315,6 +315,10 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         return availableCovers;
     }
 
+    function getCoverInfo(uint256 _coverId) external view returns (CoverLib.Cover memory) {
+        return covers[_coverId];
+    }
+
     function getUserCoverInfo(address user, uint256 _coverId) external view returns (CoverLib.GenericCoverInfo memory) {
         return userCovers[user][_coverId];
     }
