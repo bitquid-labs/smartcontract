@@ -27,6 +27,10 @@ interface ILP {
     function poolActive(uint256 poolId) external view returns (bool);
 }
 
+interface IGovToken {
+    function mint(address account, uint256 amount) external;
+}
+
 interface ICover {
     function updateUserCoverValue(
         address user,
@@ -77,9 +81,12 @@ contract Governance is ReentrancyGuard, Ownable {
 
     uint256 public proposalCounter;
     uint256 public votingDuration;
+    uint256 public REWARD_AMOUNT = 100 * 10**18;
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => mapping(address => Voter)) public voters;
     uint256[] public proposalIds;
+    mapping (uint256 => address[]) votesFor;
+    mapping (uint256 => address[]) votesAgainst;
 
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -99,6 +106,7 @@ contract Governance is ReentrancyGuard, Ownable {
 
     IERC20 public governanceToken;
     ILP public lpContract;
+    IGovToken public tokenContract;
     ICover public ICoverContract;
     address public coverContract;
     address public poolContract;
@@ -110,6 +118,7 @@ contract Governance is ReentrancyGuard, Ownable {
         address _initialOwner
     ) Ownable(_initialOwner) {
         governanceToken = IERC20(_governanceToken);
+        tokenContract = IGovToken(_governanceToken);
         lpContract = ILP(_insurancePool);
         poolContract = _insurancePool;
         votingDuration = _votingDuration * 1 minutes;
@@ -151,6 +160,7 @@ contract Governance is ReentrancyGuard, Ownable {
         require(!voters[_proposalId][msg.sender].voted, "Already voted");
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.createdAt != 0, "Proposal does not exist");
+        require(msg.sender != proposal.proposalParam.user, "You cant vote on your own proposal");
         
         if (proposal.status == ProposalStaus.Submitted) {
             proposal.status = ProposalStaus.Pending;
@@ -172,8 +182,10 @@ contract Governance is ReentrancyGuard, Ownable {
         });
 
         if (_vote) {
+            votesFor[_proposalId].push(msg.sender);
             proposal.votesFor += voterWeight;
         } else {
+            votesAgainst[_proposalId].push(msg.sender);
             proposal.votesAgainst += voterWeight;
         }
 
@@ -195,15 +207,26 @@ contract Governance is ReentrancyGuard, Ownable {
 
             proposals[_proposalId].status = ProposalStaus.Approved;
 
+            address[] memory correctVoters = votesFor[_proposalId];
             ICoverContract.updateUserCoverValue(
                 proposal.proposalParam.user,
                 proposal.proposalParam.coverId,
                 proposal.proposalParam.claimAmount
             );
 
+            for (uint256 i = 0; i < correctVoters.length; i++) {
+                address voter = correctVoters[i];
+                tokenContract.mint(voter, REWARD_AMOUNT);
+            }
+
             emit ProposalExecuted(_proposalId, true);
         } else {
+            address[] memory correctVoters = votesAgainst[_proposalId];
             proposals[_proposalId].status = ProposalStaus.Rejected;
+            for (uint256 i = 0; i < correctVoters.length; i++) {
+                address voter = correctVoters[i];
+                tokenContract.mint(voter, REWARD_AMOUNT);
+            }
             emit ProposalExecuted(_proposalId, false);
         }
     }
@@ -271,7 +294,6 @@ contract Governance is ReentrancyGuard, Ownable {
         return result;
     }
 
-
     function getPastProposals() public view returns (Proposal[] memory) {
         uint256 pastCount = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
@@ -300,4 +322,10 @@ contract Governance is ReentrancyGuard, Ownable {
         ICoverContract = ICover(_coverContract);
         coverContract = _coverContract;
     }
+
+    function updateRewardAmount(uint256 numberofTokens) public onlyOwner {
+        require(numberofTokens > 0);
+        REWARD_AMOUNT = numberofTokens * 10**18;
+    }
+
 }

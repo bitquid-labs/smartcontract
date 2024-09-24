@@ -184,6 +184,19 @@
   },
   {
     "inputs": [],
+    "name": "REWARD_AMOUNT",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "coverContract",
     "outputs": [
       {
@@ -879,6 +892,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "tokenContract",
+    "outputs": [
+      {
+        "internalType": "contract IGovToken",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -900,6 +926,19 @@
       }
     ],
     "name": "updateProposalStatusToClaimed",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "numberofTokens",
+        "type": "uint256"
+      }
+    ],
+    "name": "updateRewardAmount",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
