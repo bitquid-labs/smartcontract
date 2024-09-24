@@ -33,6 +33,8 @@ interface ICover {
         uint256 _coverId,
         uint256 _claimPaid
     ) external;
+
+    function getUserCoverInfo(address user, uint256 _coverId) external view returns (CoverLib.GenericCoverInfo memory);
 }
 
 contract Governance is ReentrancyGuard, Ownable {
@@ -114,6 +116,8 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function createProposal(ProposalParams memory params) external {
+        CoverLib.GenericCoverInfo memory userCover = ICoverContract.getUserCoverInfo(params.user, params.coverId);
+        require(params.claimAmount <= userCover.coverValue, "Not sufficient cover value for claim");
         require(lpContract.poolActive(params.poolId), "Pool does not exist");
         require(params.claimAmount > 0, "Claim amount must be greater than 0");
 
@@ -185,6 +189,7 @@ contract Governance is ReentrancyGuard, Ownable {
         );
         require(!proposal.executed, "Proposal already executed");
         proposal.executed = true;
+        proposal.timeleft = 0;
 
         if (proposal.votesFor > proposal.votesAgainst) {
 
@@ -242,26 +247,44 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function getActiveProposals() public view returns (Proposal[] memory) {
-        Proposal[] memory result = new Proposal[](proposalIds.length);
+        uint256 activeCount = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
-            if (proposals[proposalIds[i]].status == ProposalStaus.Submitted || proposals[proposalIds[i]].deadline >= block.timestamp) {
-                result[i] = proposals[proposalIds[i]];
-                if (block.timestamp == result[i].deadline || proposals[proposalIds[i]].status == ProposalStaus.Submitted) {
-                    result[i].timeleft = 0;
+            if (proposals[proposalIds[i]].deadline == 0 || proposals[proposalIds[i]].deadline > block.timestamp) {
+                activeCount++;
+            }
+        }
+
+        Proposal[] memory result = new Proposal[](activeCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < proposalIds.length; i++) {
+            if (proposals[proposalIds[i]].deadline == 0 || proposals[proposalIds[i]].deadline >= block.timestamp) {
+                result[index] = proposals[proposalIds[i]];
+                if (block.timestamp == result[index].deadline || proposals[proposalIds[i]].status == ProposalStaus.Submitted) {
+                    result[index].timeleft = 0;
                 } else {
-                    result[i].timeleft = (result[i].deadline - block.timestamp) / 1 minutes;
+                    result[index].timeleft = (result[index].deadline - block.timestamp) / 1 minutes;
                 }
+
+                index++;
             }
         }
         return result;
     }
 
+
     function getPastProposals() public view returns (Proposal[] memory) {
-        Proposal[] memory result = new Proposal[](proposalIds.length);
+        uint256 pastCount = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
             if (proposals[proposalIds[i]].status != ProposalStaus.Submitted && proposals[proposalIds[i]].deadline < block.timestamp) {
-                result[i] = proposals[proposalIds[i]];
-                result[i].timeleft = 0;
+                pastCount++;
+            }
+        }
+        Proposal[] memory result = new Proposal[](pastCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < proposalIds.length; i++) {
+            if (proposals[proposalIds[i]].status != ProposalStaus.Submitted && proposals[proposalIds[i]].deadline < block.timestamp) {
+                result[index] = proposals[proposalIds[i]];
+                result[index].timeleft = 0;
             }
         }
         return result;
