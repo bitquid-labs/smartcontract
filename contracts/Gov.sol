@@ -285,6 +285,7 @@ contract Governance is ReentrancyGuard, Ownable {
             if (proposals[proposalIds[i]].status != ProposalStaus.Submitted && proposals[proposalIds[i]].deadline < block.timestamp) {
                 result[index] = proposals[proposalIds[i]];
                 result[index].timeleft = 0;
+                index++;
             }
         }
         return result;
