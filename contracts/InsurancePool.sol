@@ -65,6 +65,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     }
 
     struct NPool {
+        uint256 poolId;
         string poolName;
         CoverLib.RiskType riskType;
         uint256 apy;
@@ -206,6 +207,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         for (uint256 i = 1; i <= poolCount; i++) {
             Pool storage pool = pools[i];
             result[i - 1] = NPool({
+                poolId: i,
                 poolName: pool.poolName,
                 riskType: pool.riskType,
                 apy: pool.apy,
