@@ -137,7 +137,7 @@ contract Governance is ReentrancyGuard, Ownable {
             Proposal memory proposal = proposals[i];
             ProposalParams memory param = proposal.proposalParam;
 
-            if (!proposal.executed && param.user == params.user && param.coverId == params.coverId) {
+            if (param.user == params.user && param.coverId == params.coverId && proposal.status != ProposalStaus.Claimed) {
                 revert CannotCreateProposalForThisCoverNow();
             }
         } 

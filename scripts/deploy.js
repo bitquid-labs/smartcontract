@@ -42,7 +42,7 @@ async function main() {
 
     await governance.setCoverContract(coverAddress);
     await insurancePool.setCover(coverAddress);
-    await insurancePool.setGovernance(coverAddress);
+    await insurancePool.setGovernance(govAddress);
 
     console.log("All contracts set");
   } catch (error) {

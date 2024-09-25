@@ -89,6 +89,11 @@
   },
   {
     "inputs": [],
+    "name": "UserHaveAlreadyPurchasedCover",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "WrongPool",
     "type": "error"
   },

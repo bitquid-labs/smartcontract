@@ -74,6 +74,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     error NoClaimableReward();
     error InvalidCoverDuration();
     error CoverNotAvailable();
+    error UserHaveAlreadyPurchasedCover();
     error NameAlreadyExists();
     error InvalidAmount();
     error UnsupportedCoverType();
@@ -270,10 +271,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
                 isActive: true
             });
         } else {
-            require((userCover.coverPeriod + _coverPeriod) < 366, "Total cover period must be less than 365");
-            userCover.coverValue += _coverValue;
-            userCover.coverPeriod += _coverPeriod;
-            userCover.endDay += (userCover.coverPeriod * 1 days);
+            revert UserHaveAlreadyPurchasedCover();
         }
 
         coverFeeBalance += msg.value;
