@@ -43,6 +43,7 @@ interface ICover {
 
 contract Governance is ReentrancyGuard, Ownable {
     error VotingTimeElapsed();
+    error CannotCreateProposalForThisCoverNow();
     struct Proposal {
         uint256 id;
         uint256 votesFor;
@@ -131,6 +132,15 @@ contract Governance is ReentrancyGuard, Ownable {
         require(params.claimAmount > 0, "Claim amount must be greater than 0");
 
         proposalCounter++;
+
+        for (uint256 i = 1; i < proposalCounter; i++) {
+            Proposal memory proposal = proposals[i];
+            ProposalParams memory param = proposal.proposalParam;
+
+            if (!proposal.executed && param.user == params.user && param.coverId == params.coverId) {
+                revert CannotCreateProposalForThisCoverNow();
+            }
+        } 
 
         proposals[proposalCounter] = Proposal({
             id: proposalCounter,
