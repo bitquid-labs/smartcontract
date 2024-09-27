@@ -114,6 +114,8 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     IGov public IGovernanceContract;
     address public coverContract;
     address public initialOwner;
+    address[] public participants;
+    mapping(address => uint256) public participation;
 
     event Deposited(address indexed user, uint256 amount, string pool);
     event Withdraw(address indexed user, uint256 amount, string pool);
@@ -309,7 +311,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
 
         require(msg.value > 0, "Amount must be greater than 0");
         require(selectedPool.isActive, "Pool is inactive or does not exist");
-
+        
         if (selectedPool.deposits[msg.sender].amount > 0) {
             uint256 amount = selectedPool.deposits[msg.sender].amount + msg.value;
             selectedPool.deposits[msg.sender].amount = amount;
@@ -336,6 +338,20 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         for (uint i = 0; i < poolCovers.length; i++) {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
         }
+
+        bool userExists = false;
+        for (uint i = 0; i < participants.length; i++) {
+            if (participants[i] == msg.sender) {
+                userExists = true;
+                break;
+            }
+        }
+
+        if (!userExists) {
+            participants.push(msg.sender);
+        }
+
+        participation[msg.sender] += 1;
 
         emit Deposited(msg.sender, msg.value, selectedPool.poolName);
     }
@@ -402,6 +418,14 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     function poolActive(uint256 poolId) public view returns (bool) {
         Pool storage pool = pools[poolId];
         return pool.isActive;
+    }
+
+    function getAllParticipants() public view returns(address[] memory) {
+        return participants;
+    }
+
+    function getUserParticipation(address user) public view returns(uint256) {
+        return participation[user];
     }
 
     function setGovernance(address _governance) external onlyOwner {
