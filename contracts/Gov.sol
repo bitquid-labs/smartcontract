@@ -88,6 +88,8 @@ contract Governance is ReentrancyGuard, Ownable {
     uint256[] public proposalIds;
     mapping (uint256 => address[]) votesFor;
     mapping (uint256 => address[]) votesAgainst;
+    address[] public participants;
+    mapping(address => uint256) public participation;
 
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -156,6 +158,19 @@ contract Governance is ReentrancyGuard, Ownable {
 
         proposalIds.push(proposalCounter); // Track the proposal ID
 
+        bool userExists = false;
+        for (uint i = 0; i < participants.length; i++) {
+            if (participants[i] == msg.sender) {
+                userExists = true;
+                break;
+            }
+        }
+
+        if (!userExists) {
+            participants.push(msg.sender);
+        }
+        participation[msg.sender] += 1;
+
         emit ProposalCreated(
             proposalCounter,
             params.user,
@@ -198,6 +213,20 @@ contract Governance is ReentrancyGuard, Ownable {
             votesAgainst[_proposalId].push(msg.sender);
             proposal.votesAgainst += voterWeight;
         }
+
+        bool userExists = false;
+        for (uint i = 0; i < participants.length; i++) {
+            if (participants[i] == msg.sender) {
+                userExists = true;
+                break;
+            }
+        }
+
+        if (!userExists) {
+            participants.push(msg.sender);
+        }
+        participation[msg.sender] += 1;
+        
 
         emit VoteCast(msg.sender, _proposalId, _vote, voterWeight);
     }
@@ -321,6 +350,14 @@ contract Governance is ReentrancyGuard, Ownable {
             }
         }
         return result;
+    }
+
+    function getAllParticipants() public view returns(address[] memory) {
+        return participants;
+    }
+
+    function getUserParticipation(address user) public view returns(uint256) {
+        return participation[user];
     }
 
     function setCoverContract(address _coverContract) external onlyOwner {

@@ -84,6 +84,8 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     ILP public lpContract;
     address public lpAddress;
     address public governance;
+    address[] public participants;
+    mapping(address => uint256) public participation;
 
     mapping(uint256 => bool) public coverExists;
     mapping(address => mapping (uint256 => uint256)) public NextLpClaimTime;
@@ -274,6 +276,19 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
             revert UserHaveAlreadyPurchasedCover();
         }
 
+        bool userExists = false;
+        for (uint i = 0; i < participants.length; i++) {
+            if (participants[i] == msg.sender) {
+                userExists = true;
+                break;
+            }
+        }
+
+        if (!userExists) {
+            participants.push(msg.sender);
+        }
+        participation[msg.sender] += 1;
+
         coverFeeBalance += msg.value;
 
         emit CoverPurchased(msg.sender, _coverValue, msg.value, cover.riskType);
@@ -416,6 +431,14 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
     function getLastClaimTime(address user, uint256 _poolId)public view returns (uint256) {
         return NextLpClaimTime[user][_poolId];
     } 
+
+    function getAllParticipants() public view returns(address[] memory) {
+        return participants;
+    }
+
+    function getUserParticipation(address user) public view returns(uint256) {
+        return participation[user];
+    }
 
     modifier onlyGovernance() {
         require(msg.sender == governance, "Not authorized");
