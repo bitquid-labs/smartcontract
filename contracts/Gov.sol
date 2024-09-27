@@ -90,6 +90,7 @@ contract Governance is ReentrancyGuard, Ownable {
     mapping (uint256 => address[]) votesAgainst;
     address[] public participants;
     mapping(address => uint256) public participation;
+    mapping(address => bool) public isAdmin;
 
     event ProposalCreated(
         uint256 indexed proposalId,
@@ -125,6 +126,11 @@ contract Governance is ReentrancyGuard, Ownable {
         lpContract = ILP(_insurancePool);
         poolContract = _insurancePool;
         votingDuration = _votingDuration * 1 minutes;
+
+        isAdmin[0xDA01D79Ca36b493C7906F3C032D2365Fb3470aEC] = true;
+        isAdmin[0x0Ea40487a37A35A1b04521265A30776cFddAbF33] = true;
+        isAdmin[0x5ac313435edB000eEbcEcbc7219D2a6Ee4f1732b] = true;
+        isAdmin[0x8664a9EB1fe83aA5A5a68DaC04D03BcD3215Cb4B] = true;
     }
 
     function createProposal(ProposalParams memory params) external {
@@ -231,7 +237,7 @@ contract Governance is ReentrancyGuard, Ownable {
         emit VoteCast(msg.sender, _proposalId, _vote, voterWeight);
     }
 
-    function executeProposal(uint256 _proposalId) external onlyOwner nonReentrant {
+    function executeProposal(uint256 _proposalId) external onlyAdmin nonReentrant {
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.status == ProposalStaus.Pending, "Proposal not pending");
         require(
@@ -375,4 +381,12 @@ contract Governance is ReentrancyGuard, Ownable {
         REWARD_AMOUNT = numberofTokens * 10**18;
     }
 
+    function addAdmin(address newAdmin) public onlyAdmin {
+        isAdmin[newAdmin] = true;
+    }
+
+    modifier onlyAdmin() {
+        require(isAdmin[msg.sender], "Not authorized");
+        _;
+    }
 }
