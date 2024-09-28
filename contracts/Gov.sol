@@ -237,42 +237,43 @@ contract Governance is ReentrancyGuard, Ownable {
         emit VoteCast(msg.sender, _proposalId, _vote, voterWeight);
     }
 
-    function executeProposal(uint256 _proposalId) external onlyAdmin nonReentrant {
-        Proposal storage proposal = proposals[_proposalId];
-        require(proposal.status == ProposalStaus.Pending, "Proposal not pending");
-        require(
-            block.timestamp > proposal.deadline,
-            "Voting period is still active"
-        );
-        require(!proposal.executed, "Proposal already executed");
-        proposal.executed = true;
-        proposal.timeleft = 0;
+    function executeProposal() external onlyAdmin nonReentrant {
+        for (uint256 i = 0; i < proposalIds.length; i++) {
+            uint256 proposalId = proposalIds[i];
+            Proposal storage proposal = proposals[proposalId];
 
-        if (proposal.votesFor > proposal.votesAgainst) {
+            if (proposal.status == ProposalStaus.Pending && 
+                block.timestamp > proposal.deadline &&
+                !proposal.executed) {
 
-            proposals[_proposalId].status = ProposalStaus.Approved;
+                proposal.executed = true;
+                proposal.timeleft = 0;
 
-            address[] memory correctVoters = votesFor[_proposalId];
-            ICoverContract.updateUserCoverValue(
-                proposal.proposalParam.user,
-                proposal.proposalParam.coverId,
-                proposal.proposalParam.claimAmount
-            );
+                if (proposal.votesFor > proposal.votesAgainst) {
+                    proposals[proposalId].status = ProposalStaus.Approved;
+                    address[] memory correctVoters = votesFor[proposalId];
+                    ICoverContract.updateUserCoverValue(
+                        proposal.proposalParam.user,
+                        proposal.proposalParam.coverId,
+                        proposal.proposalParam.claimAmount
+                    );
 
-            for (uint256 i = 0; i < correctVoters.length; i++) {
-                address voter = correctVoters[i];
-                tokenContract.mint(voter, REWARD_AMOUNT);
+                    for (uint256 j = 0; j < correctVoters.length; j++) {
+                        address voter = correctVoters[j];
+                        tokenContract.mint(voter, REWARD_AMOUNT);
+                    }
+                    
+                    emit ProposalExecuted(proposalId, true);
+                } else {
+                    address[] memory correctVoters = votesAgainst[proposalId];
+                    proposals[proposalId].status = ProposalStaus.Rejected;
+                    for (uint256 j = 0; j < correctVoters.length; j++) {
+                        address voter = correctVoters[j];
+                        tokenContract.mint(voter, REWARD_AMOUNT);
+                    }
+                    emit ProposalExecuted(proposalId, false);
+                }
             }
-
-            emit ProposalExecuted(_proposalId, true);
-        } else {
-            address[] memory correctVoters = votesAgainst[_proposalId];
-            proposals[_proposalId].status = ProposalStaus.Rejected;
-            for (uint256 i = 0; i < correctVoters.length; i++) {
-                address voter = correctVoters[i];
-                tokenContract.mint(voter, REWARD_AMOUNT);
-            }
-            emit ProposalExecuted(_proposalId, false);
         }
     }
 
