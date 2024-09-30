@@ -7,9 +7,15 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./CoverLib.sol";
 
 interface ICover {
-    function updateMaxAmount(uint256 _coverId) external ;
-    function getDepositClaimableDays(address user, uint256 _poolId) external view returns (uint256);
-    function getLastClaimTime(address user, uint256 _poolId) external view returns (uint256);
+    function updateMaxAmount(uint256 _coverId) external;
+    function getDepositClaimableDays(
+        address user,
+        uint256 _poolId
+    ) external view returns (uint256);
+    function getLastClaimTime(
+        address user,
+        uint256 _poolId
+    ) external view returns (uint256);
 }
 
 interface IGov {
@@ -36,16 +42,17 @@ interface IGov {
     }
 
     enum ProposalStaus {
-        Submitted, 
+        Submitted,
         Pending,
         Approved,
         Claimed,
         Rejected
     }
 
-    function getProposalDetails(uint256 _proposalId) external returns (Proposal memory);
-    function updateProposalStatusToClaimed(uint256 proposalId) external ;
-
+    function getProposalDetails(
+        uint256 _proposalId
+    ) external returns (Proposal memory);
+    function updateProposalStatusToClaimed(uint256 proposalId) external;
 }
 
 contract InsurancePool is ReentrancyGuard, Ownable {
@@ -106,7 +113,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         Withdrawn
     }
 
-    mapping (uint256 => CoverLib.Cover[]) poolToCovers;
+    mapping(uint256 => CoverLib.Cover[]) poolToCovers;
     mapping(uint256 => Pool) public pools;
     uint256 public poolCount;
     address public governance;
@@ -162,11 +169,17 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         emit PoolUpdated(_poolId, _apy, _minPeriod);
     }
 
-    function reducePercentageSplit(uint256 _poolId, uint256 __poolPercentageSplit) public onlyCover {
+    function reducePercentageSplit(
+        uint256 _poolId,
+        uint256 __poolPercentageSplit
+    ) public onlyCover {
         pools[_poolId].percentageSplitBalance -= __poolPercentageSplit;
     }
 
-    function increasePercentageSplit(uint256 _poolId, uint256 __poolPercentageSplit) public onlyCover {
+    function increasePercentageSplit(
+        uint256 _poolId,
+        uint256 __poolPercentageSplit
+    ) public onlyCover {
         pools[_poolId].percentageSplitBalance += __poolPercentageSplit;
     }
 
@@ -223,7 +236,10 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         return result;
     }
 
-    function updatePoolCovers(uint256 _poolId, CoverLib.Cover memory _cover) public onlyCover {
+    function updatePoolCovers(
+        uint256 _poolId,
+        CoverLib.Cover memory _cover
+    ) public onlyCover {
         for (uint i = 0; i < poolToCovers[_poolId].length; i++) {
             if (poolToCovers[_poolId][i].id == _cover.id) {
                 poolToCovers[_poolId][i] = _cover;
@@ -232,19 +248,22 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         }
     }
 
-    function addPoolCover(uint256 _poolId, CoverLib.Cover memory _cover) public onlyCover {
+    function addPoolCover(
+        uint256 _poolId,
+        CoverLib.Cover memory _cover
+    ) public onlyCover {
         poolToCovers[_poolId].push(_cover);
     }
 
-    function getPoolCovers(uint256 _poolId) public view returns (CoverLib.Cover[] memory) {
+    function getPoolCovers(
+        uint256 _poolId
+    ) public view returns (CoverLib.Cover[] memory) {
         return poolToCovers[_poolId];
     }
 
-    function getPoolsByAddress(address _userAddress)
-        public
-        view
-        returns (PoolInfo[] memory)
-    {
+    function getPoolsByAddress(
+        address _userAddress
+    ) public view returns (PoolInfo[] memory) {
         uint256 resultCount = 0;
         for (uint256 i = 1; i <= poolCount; i++) {
             Pool storage pool = pools[i];
@@ -260,7 +279,10 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         for (uint256 i = 1; i <= poolCount; i++) {
             Pool storage pool = pools[i];
             Deposits memory userDeposit = pools[i].deposits[_userAddress];
-            uint256 claimableDays = ICoverContract.getDepositClaimableDays(_userAddress, i);
+            uint256 claimableDays = ICoverContract.getDepositClaimableDays(
+                _userAddress,
+                i
+            );
             uint256 accruedPayout = userDeposit.dailyPayout * claimableDays;
             if (pool.deposits[_userAddress].amount > 0) {
                 result[resultIndex++] = PoolInfo({
@@ -304,20 +326,26 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         emit Withdraw(msg.sender, userDeposit.amount, selectedPool.poolName);
     }
 
-    function deposit(
-        uint256 _poolId
-    ) public payable nonReentrant {
+    function deposit(uint256 _poolId) public payable nonReentrant {
         Pool storage selectedPool = pools[_poolId];
 
         require(msg.value > 0, "Amount must be greater than 0");
         require(selectedPool.isActive, "Pool is inactive or does not exist");
-        
+
         if (selectedPool.deposits[msg.sender].amount > 0) {
-            uint256 amount = selectedPool.deposits[msg.sender].amount + msg.value;
+            uint256 amount = selectedPool.deposits[msg.sender].amount +
+                msg.value;
             selectedPool.deposits[msg.sender].amount = amount;
-            selectedPool.deposits[msg.sender].expiryDate = block.timestamp + (selectedPool.minPeriod * 1 days);
-            selectedPool.deposits[msg.sender].dailyPayout = (amount * selectedPool.apy) / 100 / 365;
-            selectedPool.deposits[msg.sender].daysLeft = (selectedPool.minPeriod * 1 days) ;
+            selectedPool.deposits[msg.sender].expiryDate =
+                block.timestamp +
+                (selectedPool.minPeriod * 1 days);
+            selectedPool.deposits[msg.sender].startDate = block.timestamp;
+            selectedPool.deposits[msg.sender].dailyPayout =
+                (amount * selectedPool.apy) /
+                100 /
+                365;
+            selectedPool.deposits[msg.sender].daysLeft = (selectedPool
+                .minPeriod * 1 days);
         } else {
             uint256 dailyPayout = (msg.value * selectedPool.apy) / 100 / 365;
             selectedPool.deposits[msg.sender] = Deposits({
@@ -328,7 +356,8 @@ contract InsurancePool is ReentrancyGuard, Ownable {
                 status: Status.Active,
                 daysLeft: selectedPool.minPeriod,
                 startDate: block.timestamp,
-                expiryDate: block.timestamp + (selectedPool.minPeriod * 1 minutes),
+                expiryDate: block.timestamp +
+                    (selectedPool.minPeriod * 1 minutes),
                 accruedPayout: 0
             });
         }
@@ -356,29 +385,43 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         emit Deposited(msg.sender, msg.value, selectedPool.poolName);
     }
 
-    function claimProposalFunds(
-        uint256 _proposalId
-    ) public nonReentrant {
-        IGov.Proposal memory proposal = IGovernanceContract.getProposalDetails(_proposalId);
+    function claimProposalFunds(uint256 _proposalId) public nonReentrant {
+        IGov.Proposal memory proposal = IGovernanceContract.getProposalDetails(
+            _proposalId
+        );
         IGov.ProposalParams memory proposalParam = proposal.proposalParam;
-        require(proposal.status == IGov.ProposalStaus.Approved && proposal.executed, "Proposal not approved");
+        require(
+            proposal.status == IGov.ProposalStaus.Approved && proposal.executed,
+            "Proposal not approved"
+        );
         Pool storage pool = pools[proposalParam.poolId];
-        require(msg.sender == proposalParam.user,"Not a valid proposal");
+        require(msg.sender == proposalParam.user, "Not a valid proposal");
         require(pool.isActive, "Pool is not active");
-        require(pool.tvl >= proposalParam.claimAmount, "Not enough funds in the pool");
+        require(
+            pool.tvl >= proposalParam.claimAmount,
+            "Not enough funds in the pool"
+        );
 
         pool.tcp += proposalParam.claimAmount;
         pool.tvl -= proposalParam.claimAmount;
-        CoverLib.Cover[] memory poolCovers = getPoolCovers(proposalParam.poolId);
+        CoverLib.Cover[] memory poolCovers = getPoolCovers(
+            proposalParam.poolId
+        );
         for (uint i = 0; i < poolCovers.length; i++) {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
         }
 
         IGovernanceContract.updateProposalStatusToClaimed(_proposalId);
 
-        emit ClaimAttempt(proposalParam.poolId, proposalParam.claimAmount, proposalParam.user);
+        emit ClaimAttempt(
+            proposalParam.poolId,
+            proposalParam.claimAmount,
+            proposalParam.user
+        );
 
-        (bool success, ) = msg.sender.call{value: proposalParam.claimAmount}("");
+        (bool success, ) = msg.sender.call{value: proposalParam.claimAmount}(
+            ""
+        );
         require(success, "Transfer failed");
 
         emit ClaimPaid(msg.sender, pool.poolName, proposalParam.claimAmount);
@@ -420,11 +463,11 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         return pool.isActive;
     }
 
-    function getAllParticipants() public view returns(address[] memory) {
+    function getAllParticipants() public view returns (address[] memory) {
         return participants;
     }
 
-    function getUserParticipation(address user) public view returns(uint256) {
+    function getUserParticipation(address user) public view returns (uint256) {
         return participation[user];
     }
 
@@ -437,7 +480,10 @@ contract InsurancePool is ReentrancyGuard, Ownable {
 
     function setCover(address _coverContract) external onlyOwner {
         require(coverContract == address(0), "Governance already set");
-        require(_coverContract != address(0), "Governance address cannot be zero");
+        require(
+            _coverContract != address(0),
+            "Governance address cannot be zero"
+        );
         ICoverContract = ICover(_coverContract);
         coverContract = _coverContract;
     }
