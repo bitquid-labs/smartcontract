@@ -18,6 +18,16 @@ interface ICover {
     ) external view returns (uint256);
 }
 
+interface IbqBTC {
+    function mint(address account, uint256 amount) external;
+    function burn(address account, uint256 amount) external;
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) external returns (bool);
+}
+
 interface IGov {
     struct ProposalParams {
         address user;
@@ -119,6 +129,8 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     address public governance;
     ICover public ICoverContract;
     IGov public IGovernanceContract;
+    IbqBTC public bqBTC;
+    address public bqBTCAddress;
     address public coverContract;
     address public initialOwner;
     address[] public participants;
@@ -131,8 +143,10 @@ contract InsurancePool is ReentrancyGuard, Ownable {
     event PoolUpdated(uint256 indexed poolId, uint256 apy, uint256 _minPeriod);
     event ClaimAttempt(uint256, uint256, address);
 
-    constructor(address _initialOwner) Ownable(_initialOwner) {
+    constructor(address _initialOwner, address _bqBTC) Ownable(_initialOwner) {
         initialOwner = _initialOwner;
+        bqBTC = IbqBTC(_bqBTC);
+        bqBTCAddress = _bqBTC;
     }
 
     function createPool(
@@ -320,21 +334,22 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
         }
 
-        (bool success, ) = msg.sender.call{value: userDeposit.amount}("");
-        require(success, "Withdrawal failed");
+        bqBTC.mint(msg.sender, userDeposit.amount);
 
         emit Withdraw(msg.sender, userDeposit.amount, selectedPool.poolName);
     }
 
-    function deposit(uint256 _poolId) public payable nonReentrant {
+    function deposit(uint256 _poolId, uint256 _amount) public nonReentrant {
         Pool storage selectedPool = pools[_poolId];
 
-        require(msg.value > 0, "Amount must be greater than 0");
+        require(_amount > 0, "Amount must be greater than 0");
         require(selectedPool.isActive, "Pool is inactive or does not exist");
 
+        bqBTC.burn(msg.sender, _amount);
+        selectedPool.tvl += _amount;
+
         if (selectedPool.deposits[msg.sender].amount > 0) {
-            uint256 amount = selectedPool.deposits[msg.sender].amount +
-                msg.value;
+            uint256 amount = selectedPool.deposits[msg.sender].amount + _amount;
             selectedPool.deposits[msg.sender].amount = amount;
             selectedPool.deposits[msg.sender].expiryDate =
                 block.timestamp +
@@ -347,10 +362,10 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             selectedPool.deposits[msg.sender].daysLeft = (selectedPool
                 .minPeriod * 1 days);
         } else {
-            uint256 dailyPayout = (msg.value * selectedPool.apy) / 100 / 365;
+            uint256 dailyPayout = (_amount * selectedPool.apy) / 100 / 365;
             selectedPool.deposits[msg.sender] = Deposits({
                 lp: msg.sender,
-                amount: msg.value,
+                amount: _amount,
                 poolId: _poolId,
                 dailyPayout: dailyPayout,
                 status: Status.Active,
@@ -362,7 +377,6 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             });
         }
 
-        selectedPool.tvl += msg.value;
         CoverLib.Cover[] memory poolCovers = getPoolCovers(_poolId);
         for (uint i = 0; i < poolCovers.length; i++) {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
@@ -382,7 +396,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
 
         participation[msg.sender] += 1;
 
-        emit Deposited(msg.sender, msg.value, selectedPool.poolName);
+        emit Deposited(msg.sender, _amount, selectedPool.poolName);
     }
 
     function claimProposalFunds(uint256 _proposalId) public nonReentrant {
@@ -419,10 +433,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             proposalParam.user
         );
 
-        (bool success, ) = msg.sender.call{value: proposalParam.claimAmount}(
-            ""
-        );
-        require(success, "Transfer failed");
+        bqBTC.mint(msg.sender, proposalParam.claimAmount);
 
         emit ClaimPaid(msg.sender, pool.poolName, proposalParam.claimAmount);
     }

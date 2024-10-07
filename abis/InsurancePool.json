@@ -5,6 +5,11 @@
         "internalType": "address",
         "name": "_initialOwner",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_bqBTC",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
@@ -307,6 +312,32 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "bqBTC",
+    "outputs": [
+      {
+        "internalType": "contract IbqBTC",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "bqBTCAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -379,11 +410,16 @@
         "internalType": "uint256",
         "name": "_poolId",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_amount",
+        "type": "uint256"
       }
     ],
     "name": "deposit",
     "outputs": [],
-    "stateMutability": "payable",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
