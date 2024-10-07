@@ -438,6 +438,26 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         emit ClaimPaid(msg.sender, pool.poolName, proposalParam.claimAmount);
     }
 
+    function getUDep(
+        uint256 _poolId,
+        address _user
+    ) public view returns (Deposits memory) {
+        return pools[_poolId].deposits[_user];
+    }
+
+    function externalFunctions(
+        uint256 _poolId,
+        address _user
+    ) public view returns (uint256, uint256) {
+        uint256 claimTime = ICoverContract.getLastClaimTime(_user, _poolId);
+        uint256 claimableDays = ICoverContract.getDepositClaimableDays(
+            _user,
+            _poolId
+        );
+
+        return (claimTime, claimableDays);
+    }
+
     function getUserDeposit(
         uint256 _poolId,
         address _user
