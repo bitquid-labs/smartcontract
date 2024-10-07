@@ -12,7 +12,7 @@ module.exports = {
       accounts: [PRIVATE_KEY],
     },
     b2Testnet: {
-      url: "https://zkevm-rpc.bsquared.network",
+      url: "https://rpc.ankr.com/b2_testnet",
       accounts: [PRIVATE_KEY],
     },
     merlin: {
@@ -45,6 +45,10 @@ module.exports = {
     },
     sepolia: {
       url: "https://eth-sepolia.g.alchemy.com/v2/VtFb4uQ7Vc5l414EGwXDDzcSClkHv9TY",
+      accounts: [PRIVATE_KEY],
+    },
+    core: {
+      url: "https://rpc.test.btcs.network/",
       accounts: [PRIVATE_KEY],
     },
   },
