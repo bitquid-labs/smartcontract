@@ -38,7 +38,10 @@ interface ICover {
         uint256 _claimPaid
     ) external;
 
-    function getUserCoverInfo(address user, uint256 _coverId) external view returns (CoverLib.GenericCoverInfo memory);
+    function getUserCoverInfo(
+        address user,
+        uint256 _coverId
+    ) external view returns (CoverLib.GenericCoverInfo memory);
 }
 
 contract Governance is ReentrancyGuard, Ownable {
@@ -73,7 +76,7 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     enum ProposalStaus {
-        Submitted, 
+        Submitted,
         Pending,
         Approved,
         Claimed,
@@ -82,12 +85,12 @@ contract Governance is ReentrancyGuard, Ownable {
 
     uint256 public proposalCounter;
     uint256 public votingDuration;
-    uint256 public REWARD_AMOUNT = 100 * 10**18;
+    uint256 public REWARD_AMOUNT = 100 * 10 ** 18;
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => mapping(address => Voter)) public voters;
     uint256[] public proposalIds;
-    mapping (uint256 => address[]) votesFor;
-    mapping (uint256 => address[]) votesAgainst;
+    mapping(uint256 => address[]) votesFor;
+    mapping(uint256 => address[]) votesAgainst;
     address[] public participants;
     mapping(address => uint256) public participation;
     mapping(address => bool) public isAdmin;
@@ -127,6 +130,7 @@ contract Governance is ReentrancyGuard, Ownable {
         poolContract = _insurancePool;
         votingDuration = _votingDuration * 1 minutes;
 
+        isAdmin[msg.sender] = true;
         isAdmin[0xDA01D79Ca36b493C7906F3C032D2365Fb3470aEC] = true;
         isAdmin[0x0Ea40487a37A35A1b04521265A30776cFddAbF33] = true;
         isAdmin[0x5ac313435edB000eEbcEcbc7219D2a6Ee4f1732b] = true;
@@ -134,8 +138,12 @@ contract Governance is ReentrancyGuard, Ownable {
     }
 
     function createProposal(ProposalParams memory params) external {
-        CoverLib.GenericCoverInfo memory userCover = ICoverContract.getUserCoverInfo(params.user, params.coverId);
-        require(params.claimAmount <= userCover.coverValue, "Not sufficient cover value for claim");
+        CoverLib.GenericCoverInfo memory userCover = ICoverContract
+            .getUserCoverInfo(params.user, params.coverId);
+        require(
+            params.claimAmount <= userCover.coverValue,
+            "Not sufficient cover value for claim"
+        );
         require(lpContract.poolActive(params.poolId), "Pool does not exist");
         require(params.claimAmount > 0, "Claim amount must be greater than 0");
 
@@ -145,10 +153,15 @@ contract Governance is ReentrancyGuard, Ownable {
             Proposal memory proposal = proposals[i];
             ProposalParams memory param = proposal.proposalParam;
 
-            if (param.user == params.user && param.coverId == params.coverId && proposal.status != ProposalStaus.Claimed && proposal.status != ProposalStaus.Rejected) {
+            if (
+                param.user == params.user &&
+                param.coverId == params.coverId &&
+                proposal.status != ProposalStaus.Claimed &&
+                proposal.status != ProposalStaus.Rejected
+            ) {
                 revert CannotCreateProposalForThisCoverNow();
             }
-        } 
+        }
 
         proposals[proposalCounter] = Proposal({
             id: proposalCounter,
@@ -191,12 +204,17 @@ contract Governance is ReentrancyGuard, Ownable {
         require(!voters[_proposalId][msg.sender].voted, "Already voted");
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.createdAt != 0, "Proposal does not exist");
-        require(msg.sender != proposal.proposalParam.user, "You cant vote on your own proposal");
-        
+        require(
+            msg.sender != proposal.proposalParam.user,
+            "You cant vote on your own proposal"
+        );
+
         if (proposal.status == ProposalStaus.Submitted) {
             proposal.status = ProposalStaus.Pending;
             proposal.deadline = block.timestamp + votingDuration;
-            proposal.timeleft = (proposal.deadline - block.timestamp) / 1 minutes;
+            proposal.timeleft =
+                (proposal.deadline - block.timestamp) /
+                1 minutes;
         } else if (block.timestamp >= proposal.deadline) {
             proposal.timeleft = 0;
             revert VotingTimeElapsed();
@@ -232,7 +250,6 @@ contract Governance is ReentrancyGuard, Ownable {
             participants.push(msg.sender);
         }
         participation[msg.sender] += 1;
-        
 
         emit VoteCast(msg.sender, _proposalId, _vote, voterWeight);
     }
@@ -242,10 +259,11 @@ contract Governance is ReentrancyGuard, Ownable {
             uint256 proposalId = proposalIds[i];
             Proposal storage proposal = proposals[proposalId];
 
-            if (proposal.status == ProposalStaus.Pending && 
+            if (
+                proposal.status == ProposalStaus.Pending &&
                 block.timestamp > proposal.deadline &&
-                !proposal.executed) {
-
+                !proposal.executed
+            ) {
                 proposal.executed = true;
                 proposal.timeleft = 0;
 
@@ -262,7 +280,7 @@ contract Governance is ReentrancyGuard, Ownable {
                         address voter = correctVoters[j];
                         tokenContract.mint(voter, REWARD_AMOUNT);
                     }
-                    
+
                     emit ProposalExecuted(proposalId, true);
                 } else {
                     address[] memory correctVoters = votesAgainst[proposalId];
@@ -277,8 +295,14 @@ contract Governance is ReentrancyGuard, Ownable {
         }
     }
 
-    function updateProposalStatusToClaimed(uint256 proposalId) public nonReentrant {
-        require(msg.sender == proposals[proposalId].proposalParam.user || msg.sender == poolContract, "Not the valid proposer");
+    function updateProposalStatusToClaimed(
+        uint256 proposalId
+    ) public nonReentrant {
+        require(
+            msg.sender == proposals[proposalId].proposalParam.user ||
+                msg.sender == poolContract,
+            "Not the valid proposer"
+        );
         proposals[proposalId].status = ProposalStaus.Claimed;
     }
 
@@ -297,7 +321,9 @@ contract Governance is ReentrancyGuard, Ownable {
         if (block.timestamp >= proposals[_proposalId].deadline) {
             proposals[_proposalId].timeleft = 0;
         } else {
-            proposals[_proposalId].timeleft = (proposals[_proposalId].deadline - block.timestamp) / 1 minutes;
+            proposals[_proposalId].timeleft =
+                (proposals[_proposalId].deadline - block.timestamp) /
+                1 minutes;
         }
         return proposals[_proposalId];
     }
@@ -309,7 +335,9 @@ contract Governance is ReentrancyGuard, Ownable {
             if (block.timestamp >= result[i].deadline) {
                 result[i].timeleft = 0;
             } else {
-                result[i].timeleft = (result[i].deadline - block.timestamp) / 1 minutes;
+                result[i].timeleft =
+                    (result[i].deadline - block.timestamp) /
+                    1 minutes;
             }
         }
         return result;
@@ -318,7 +346,10 @@ contract Governance is ReentrancyGuard, Ownable {
     function getActiveProposals() public view returns (Proposal[] memory) {
         uint256 activeCount = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
-            if (proposals[proposalIds[i]].deadline == 0 || proposals[proposalIds[i]].deadline > block.timestamp) {
+            if (
+                proposals[proposalIds[i]].deadline == 0 ||
+                proposals[proposalIds[i]].deadline > block.timestamp
+            ) {
                 activeCount++;
             }
         }
@@ -326,12 +357,20 @@ contract Governance is ReentrancyGuard, Ownable {
         Proposal[] memory result = new Proposal[](activeCount);
         uint256 index = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
-            if (proposals[proposalIds[i]].deadline == 0 || proposals[proposalIds[i]].deadline >= block.timestamp) {
+            if (
+                proposals[proposalIds[i]].deadline == 0 ||
+                proposals[proposalIds[i]].deadline >= block.timestamp
+            ) {
                 result[index] = proposals[proposalIds[i]];
-                if (block.timestamp == result[index].deadline || proposals[proposalIds[i]].status == ProposalStaus.Submitted) {
+                if (
+                    block.timestamp == result[index].deadline ||
+                    proposals[proposalIds[i]].status == ProposalStaus.Submitted
+                ) {
                     result[index].timeleft = 0;
                 } else {
-                    result[index].timeleft = (result[index].deadline - block.timestamp) / 1 minutes;
+                    result[index].timeleft =
+                        (result[index].deadline - block.timestamp) /
+                        1 minutes;
                 }
 
                 index++;
@@ -343,14 +382,20 @@ contract Governance is ReentrancyGuard, Ownable {
     function getPastProposals() public view returns (Proposal[] memory) {
         uint256 pastCount = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
-            if (proposals[proposalIds[i]].status != ProposalStaus.Submitted && proposals[proposalIds[i]].deadline < block.timestamp) {
+            if (
+                proposals[proposalIds[i]].status != ProposalStaus.Submitted &&
+                proposals[proposalIds[i]].deadline < block.timestamp
+            ) {
                 pastCount++;
             }
         }
         Proposal[] memory result = new Proposal[](pastCount);
         uint256 index = 0;
         for (uint256 i = 0; i < proposalIds.length; i++) {
-            if (proposals[proposalIds[i]].status != ProposalStaus.Submitted && proposals[proposalIds[i]].deadline < block.timestamp) {
+            if (
+                proposals[proposalIds[i]].status != ProposalStaus.Submitted &&
+                proposals[proposalIds[i]].deadline < block.timestamp
+            ) {
                 result[index] = proposals[proposalIds[i]];
                 result[index].timeleft = 0;
                 index++;
@@ -359,11 +404,11 @@ contract Governance is ReentrancyGuard, Ownable {
         return result;
     }
 
-    function getAllParticipants() public view returns(address[] memory) {
+    function getAllParticipants() public view returns (address[] memory) {
         return participants;
     }
 
-    function getUserParticipation(address user) public view returns(uint256) {
+    function getUserParticipation(address user) public view returns (uint256) {
         return participation[user];
     }
 
@@ -379,7 +424,7 @@ contract Governance is ReentrancyGuard, Ownable {
 
     function updateRewardAmount(uint256 numberofTokens) public onlyOwner {
         require(numberofTokens > 0);
-        REWARD_AMOUNT = numberofTokens * 10**18;
+        REWARD_AMOUNT = numberofTokens * 10 ** 18;
     }
 
     function addAdmin(address newAdmin) public onlyAdmin {
