@@ -2,8 +2,9 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Governance Contract", function () {
-  let Governance, governanceToken, lpContract, coverContract, governance;
-  let governanceAddress,
+  let lpContract,
+    coverContract,
+    governance,
     bqbtcAddress,
     bqtokenAddress,
     lpContractAddress,
@@ -85,7 +86,7 @@ describe("Governance Contract", function () {
       .connect(addr1)
       .purchaseCover(1, ethers.parseEther("3"), 120, 120000);
 
-    await await expect(governance.connect(addr1).createProposal(proposalParams))
+    await expect(governance.connect(addr1).createProposal(proposalParams))
       .to.emit(governance, "ProposalCreated")
       .withArgs(
         1,
@@ -160,7 +161,6 @@ describe("Governance Contract", function () {
     await bqbtc.mint(addr2.address, ethers.parseEther("10"));
     await bqtoken.mint(addr2.address, ethers.parseEther("10"));
     await lpContract.connect(addr2).deposit(1, ethers.parseEther("10"));
-    await governance.addAdmin;
 
     await coverContract
       .connect(owner)
