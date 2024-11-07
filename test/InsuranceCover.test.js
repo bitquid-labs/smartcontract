@@ -2,119 +2,140 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("InsuranceCover", function () {
-  let InsuranceCover, insuranceCover;
+  let insuranceCover, lpContractMock, governance, bqbtc, governanceToken;
   let owner, user1, user2;
-  let lpContractMock, governance;
-  let CoverLib;
 
   beforeEach(async function () {
-    [owner, user1, user2, governance] = await ethers.getSigners();
+    [owner, user1, user2] = await ethers.getSigners();
+
+    const GovernanceToken = await ethers.getContractFactory("BQToken");
+    governanceToken = await GovernanceToken.deploy(
+      "BitQuid",
+      "BQ",
+      18,
+      ethers.parseEther("1000000")
+    );
+
+    const BQBTC = await ethers.getContractFactory("bqBTC");
+    bqbtc = await BQBTC.deploy(
+      "BitQuid",
+      "BQ",
+      18,
+      ethers.parseEther("1000000"),
+      owner.address
+    );
 
     const LPContractMock = await ethers.getContractFactory("InsurancePool");
-    lpContractMock = await LPContractMock.deploy(owner.address);
+    lpContractMock = await LPContractMock.deploy(owner.address, bqbtc.target);
 
-    // const CoverLibFactory = await ethers.getContractFactory("CoverLib");
-    // CoverLib = await CoverLibFactory.deploy();
-    Governance = await ethers.getContractFactory("Governance");
+    const Governance = await ethers.getContractFactory("Governance");
     governance = await Governance.deploy(
       governanceToken.target,
-      lpContract.target,
+      lpContractMock.target,
       1,
       owner.address
     );
+
     const InsuranceCoverFactory = await ethers.getContractFactory(
       "InsuranceCover"
     );
-
     insuranceCover = await InsuranceCoverFactory.deploy(
       lpContractMock.target,
       owner.address,
-      governance.target
+      governance.target,
+      bqbtc.target
     );
+
+    await lpContractMock.setCover(insuranceCover.target);
+    await lpContractMock.setGovernance(governance.target);
+    await governance.setCoverContract(insuranceCover.target);
+    await bqbtc.setPoolandCover(lpContractMock.target, insuranceCover.target);
   });
 
   describe("Cover Creation", function () {
     beforeEach(async function () {
+      await bqbtc.mint(user2.address, ethers.parseEther("10"));
       await lpContractMock
         .connect(owner)
         .createPool(0, "Slashing pool", 3, 120);
-      await lpContractMock.connect(user2).deposit(1, 150, {
-        value: ethers.parseEther("1000"),
-      });
-      await lpContractMock.setCover(insuranceCover.target);
+      await lpContractMock.connect(user2).deposit(1, ethers.parseEther("10"));
     });
-    it("Should create a new slashing cover", async function () {
-      await insuranceCover
-        .connect(owner)
-        .createCover(0, "Slashing Cover", "Ethereum", 40, 1);
 
-      const cover = await insuranceCover.slashingCovers(1);
+    it("Should create a new slashing cover successfully", async function () {
+      await expect(
+        insuranceCover
+          .connect(owner)
+          .createCover(1, "cid", 0, "Slashing Cover", "Ethereum", 50, 5, 1)
+      )
+        .to.emit(insuranceCover, "CoverCreated")
+        .withArgs(1, "Slashing Cover", 0);
+
+      const cover = await insuranceCover.covers(1);
       expect(cover.coverName).to.equal("Slashing Cover");
       expect(cover.chains).to.equal("Ethereum");
+      expect(cover.capacity).to.equal(50);
+      expect(cover.cost).to.equal(5);
+    });
+
+    it("Should revert if non-owner tries to create a cover", async function () {
+      await expect(
+        insuranceCover
+          .connect(user1)
+          .createCover(1, "cid", 0, "Unauthorized Cover", "Ethereum", 50, 5, 1)
+      ).to.be.revertedWithCustomError(
+        insuranceCover,
+        "OwnableUnauthorizedAccount"
+      );
     });
   });
 
   describe("Cover Purchase", function () {
     beforeEach(async function () {
-      await lpContractMock.connect(owner).createPool(0, "Random Pool", 3, 28);
-      await lpContractMock.connect(user2).deposit(1, 150, {
-        value: ethers.parseEther("1000"),
-      });
-      await lpContractMock.setCover(insuranceCover.target);
+      await bqbtc.mint(user2.address, ethers.parseEther("10"));
+      await lpContractMock
+        .connect(owner)
+        .createPool(0, "Slashing pool", 3, 120);
+      await lpContractMock.connect(user2).deposit(1, ethers.parseEther("10"));
+
       await insuranceCover
         .connect(owner)
-        .createCover(0, "Slashing Cover", "Ethereum", 50, 1);
-
-      await lpContractMock.deposit(1, 50, { value: ethers.parseEther("300") });
+        .createCover(1, "cid", 0, "Slashing Cover", "Ethereum", 50, 5, 1);
+      await bqbtc.mint(user1.address, ethers.parseEther("100"));
     });
 
-    it("Should allow a user to purchase a slashing cover", async function () {
-      const coverValue = ethers.parseEther("100");
-      const covers = await insuranceCover.getAllAvailableCovers();
-      console.log("Covers: ", covers);
+    it("Should allow a user to purchase a slashing cover successfully", async function () {
+      const coverValue = ethers.parseEther("3");
+      await expect(
+        insuranceCover
+          .connect(user1)
+          .purchaseCover(1, coverValue, 30, ethers.parseEther("5"))
+      )
+        .to.emit(insuranceCover, "CoverPurchased")
+        .withArgs(user1.address, coverValue, ethers.parseEther("5"), 0);
 
-      await insuranceCover.connect(user1).purchaseCover(
-        0, // Slashing
-        1, // Cover ID
-        "Slashing Cover",
-        coverValue,
-        30, // Cover period (days)
-        { value: ethers.parseEther("1") } // Cover fee
-      );
-
-      const userCover = await insuranceCover.userToSlashingCover(
-        user1.address,
-        1
-      );
+      const userCover = await insuranceCover.getUserCoverInfo(user1.address, 1);
       expect(userCover.coverValue).to.equal(coverValue);
       expect(userCover.isActive).to.be.true;
     });
 
     it("Should revert if cover period is invalid", async function () {
       await expect(
-        insuranceCover.connect(user1).purchaseCover(
-          0, // Slashing
-          1, // Cover ID
-          "Slashing Cover",
-          1, // Chain ID
-          ethers.parseEther("100"),
-          10, // Invalid Cover period (too short)
-          { value: ethers.parseEther("1") } // Cover fee
-        )
+        insuranceCover
+          .connect(user1)
+          .purchaseCover(1, ethers.parseEther("10"), 10, ethers.parseEther("5"))
       ).to.be.revertedWithCustomError(insuranceCover, "InvalidCoverDuration");
     });
 
     it("Should revert if cover value exceeds the cover balance", async function () {
       await expect(
-        insuranceCover.connect(user1).purchaseCover(
-          0, // Slashing
-          1, // Cover ID
-          "Slashing Cover",
-          1, // Chain ID
-          ethers.parseEther("2000"), // Exceeds cover balance
-          30, // Cover period (days)
-          { value: ethers.parseEther("1") } // Cover fee
-        )
+        insuranceCover
+          .connect(user1)
+          .purchaseCover(
+            1,
+            ethers.parseEther("1000"),
+            30,
+            ethers.parseEther("5")
+          )
       ).to.be.revertedWithCustomError(
         insuranceCover,
         "InsufficientPoolBalance"
@@ -124,52 +145,43 @@ describe("InsuranceCover", function () {
 
   describe("Claim Payout", function () {
     beforeEach(async function () {
-      await lpContractMock.createPool("Random Pool", 5, 28);
-      const pool = await lpContractMock.getPool(1);
-      await lpContractMock.connect(user2).deposit(1, 150, {
-        value: ethers.parseEther("1000"),
-      });
-      // Create a cover and simulate a purchase
+      await bqbtc.mint(user2.address, ethers.parseEther("11"));
+      await bqbtc.mint(user1.address, ethers.parseEther("16"));
+      await lpContractMock
+        .connect(owner)
+        .createPool(0, "Slashing pool", 3, 120);
+      await lpContractMock.connect(user2).deposit(1, ethers.parseEther("10"));
+
       await insuranceCover
         .connect(owner)
-        .createCover(0, "Slashing Cover", "Ethereum", 56, 1);
+        .createCover(1, "cid", 0, "Slashing Cover", "Ethereum", 50, 5, 1);
 
-      await insuranceCover.connect(user1).purchaseCover(
-        0, // Slashing
-        1, // Cover ID
-        "Slashing Cover",
-        1, // Chain ID
-        ethers.parseEther("100"),
-        30, // Cover period (days)
-        { value: ethers.parseEther("1") } // Cover fee
-      );
+      await insuranceCover
+        .connect(user1)
+        .purchaseCover(1, ethers.parseEther("3"), 30, ethers.parseEther("5"));
     });
 
-    it("Should allow LP to claim a payout", async function () {
-      await lpContractMock.deposit(
-        1, // poolId
-        40,
-        {
-          value: ethers.parseEther("1000"),
-        }
+    it("Should allow LP to claim a payout if eligible", async function () {
+      await lpContractMock.connect(user1).deposit(1, ethers.parseEther("10"));
+
+      const initialBalance = await bqbtc.balanceOf(user1.address);
+
+      await ethers.provider.send("evm_increaseTime", [12 * 60]);
+      await ethers.provider.send("evm_mine", []);
+
+      await expect(insuranceCover.connect(user1).claimPayoutForLP(1)).to.emit(
+        insuranceCover,
+        "PayoutClaimed"
       );
 
-      await insuranceCover.connect(user1).claimPayoutForLP(1);
-      const balanceAfterClaim = await ethers.provider.getBalance(user1.address);
-      expect(balanceAfterClaim).to.be.gt(0);
+      const finalBalance = await bqbtc.balanceOf(user1.address);
+      expect(finalBalance).to.be.gt(initialBalance);
     });
 
-    it("Should revert if LP is not active and go through if LP is active", async function () {
-      await lpContractMock.connect(user1).deposit(
-        1, // poolId
-        30,
-        {
-          value: ethers.parseEther("7300"),
-        }
-      );
-      const deposit = await lpContractMock.getUserDeposit(1, user1);
-      const dailyPayout = ethers.formatEther(deposit.dailyPayout);
-      expect(parseFloat(dailyPayout)).to.be.eq(1.0);
+    it("Should revert if LP is not active", async function () {
+      await expect(
+        insuranceCover.connect(user1).claimPayoutForLP(1)
+      ).to.be.revertedWithCustomError(insuranceCover, "NoClaimableReward");
     });
   });
 });
