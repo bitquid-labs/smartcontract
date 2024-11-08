@@ -2,13 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("Governance Contract", function () {
-  let lpContract,
-    coverContract,
-    governance,
-    bqbtcAddress,
-    bqtokenAddress,
-    lpContractAddress,
-    coverContractAddress;
+  let lpContract, coverContract, governance, bqbtc, bqtoken;
   let owner, addr1, addr2;
 
   beforeEach(async function () {
@@ -22,7 +16,6 @@ describe("Governance Contract", function () {
       ethers.parseEther("1000000"),
       owner.address
     );
-    bqbtcAddress = bqbtc.target;
 
     const BQToken = await ethers.getContractFactory("BQToken");
     bqtoken = await BQToken.deploy(
@@ -31,34 +24,30 @@ describe("Governance Contract", function () {
       18,
       ethers.parseEther("1000000")
     );
-    bqtokenAddress = bqtoken.target;
 
     const LPContract = await ethers.getContractFactory("InsurancePool");
-    lpContract = await LPContract.deploy(owner.address, bqbtcAddress);
-    lpContractAddress = lpContract.target;
+    lpContract = await LPContract.deploy(owner.address, bqbtc.target);
 
     Governance = await ethers.getContractFactory("Governance");
     governance = await Governance.deploy(
-      bqtokenAddress,
-      lpContractAddress,
+      bqtoken.target,
+      lpContract.target,
       1,
       owner.address
     );
-    governanceAddress = governance.target;
 
     const CoverContract = await ethers.getContractFactory("InsuranceCover");
     coverContract = await CoverContract.deploy(
-      lpContractAddress,
+      lpContract.target,
       owner.address,
-      governanceAddress,
-      bqbtcAddress
+      governance.target,
+      bqbtc.target
     );
-    coverContractAddress = coverContract.target;
 
-    await lpContract.setGovernance(governanceAddress);
-    await governance.setCoverContract(coverContractAddress);
-    await lpContract.setCover(coverContractAddress);
-    await bqbtc.setPoolandCover(lpContractAddress, coverContractAddress);
+    await lpContract.setGovernance(governance.target);
+    await governance.setCoverContract(coverContract.target);
+    await lpContract.setCover(coverContract.target);
+    await bqbtc.setPoolandCover(lpContract.target, coverContract.target);
   });
 
   it("Should create a proposal successfully", async function () {
