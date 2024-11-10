@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./CoverLib.sol";
 
 interface IbqBTC {
-    function mint(address account, uint256 amount) external;
+    function bqMint(address account, uint256 amount) external;
     function burn(address account, uint256 amount) external;
     function transferFrom(
         address from,
@@ -509,7 +509,7 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
         }
         NextLpClaimTime[msg.sender][_poolId] = block.timestamp;
 
-        bqBTC.mint(msg.sender, claimableAmount);
+        bqBTC.bqMint(msg.sender, claimableAmount);
 
         coverFeeBalance -= claimableAmount;
 

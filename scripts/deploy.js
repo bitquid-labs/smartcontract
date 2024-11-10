@@ -2,6 +2,8 @@ const { ethers } = require("hardhat");
 
 const OWNER = "0xDA01D79Ca36b493C7906F3C032D2365Fb3470aEC";
 const GOVTOKEN = "0x73795572FB8c1c737513156ecb8b1Cc9a3f9cA46";
+const BSCBTC = "0x6ce8da28e2f864420840cf74474eff5fd80e65b8";
+const MIN = 20000000000000;
 
 async function main() {
   console.log("Starting deployment script...");
@@ -18,7 +20,9 @@ async function main() {
       "bqBTC",
       18,
       200000000000000,
-      OWNER
+      OWNER,
+      BSCBTC,
+      MIN
     );
     const bqBTCAddress = await bqBTC.getAddress();
 
@@ -57,7 +61,7 @@ async function main() {
     await governance.setCoverContract(coverAddress);
     await insurancePool.setCover(coverAddress);
     await insurancePool.setGovernance(govAddress);
-    await bqBTC.setPoolandCover(poolAddress, coverAddress);
+    await bqBTC.setPoolandCover(poolAddress, coverAddress, govAddress);
 
     console.log("All contracts set");
   } catch (error) {

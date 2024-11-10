@@ -51,5 +51,9 @@ module.exports = {
       url: "https://rpc.test.btcs.network/",
       accounts: [PRIVATE_KEY],
     },
+    bsc: {
+      url: "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+      accounts: [PRIVATE_KEY],
+    },
   },
 };
