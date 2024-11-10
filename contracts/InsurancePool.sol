@@ -19,7 +19,7 @@ interface ICover {
 }
 
 interface IbqBTC {
-    function mint(address account, uint256 amount) external;
+    function bqMint(address account, uint256 amount) external;
     function burn(address account, uint256 amount) external;
     function transferFrom(
         address from,
@@ -334,7 +334,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
         }
 
-        bqBTC.mint(msg.sender, userDeposit.amount);
+        bqBTC.bqMint(msg.sender, userDeposit.amount);
 
         emit Withdraw(msg.sender, userDeposit.amount, selectedPool.poolName);
     }
@@ -433,7 +433,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             proposalParam.user
         );
 
-        bqBTC.mint(msg.sender, proposalParam.claimAmount);
+        bqBTC.bqMint(msg.sender, proposalParam.claimAmount);
 
         emit ClaimPaid(msg.sender, pool.poolName, proposalParam.claimAmount);
     }
