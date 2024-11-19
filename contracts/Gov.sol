@@ -128,10 +128,9 @@ contract Governance is ReentrancyGuard, Ownable {
         tokenContract = IGovToken(_governanceToken);
         lpContract = ILP(_insurancePool);
         poolContract = _insurancePool;
-        votingDuration = _votingDuration * 1 minutes;
+        votingDuration = _votingDuration * 1 days;
 
         isAdmin[msg.sender] = true;
-        isAdmin[0xDA01D79Ca36b493C7906F3C032D2365Fb3470aEC] = true;
         isAdmin[0x0Ea40487a37A35A1b04521265A30776cFddAbF33] = true;
         isAdmin[0x5ac313435edB000eEbcEcbc7219D2a6Ee4f1732b] = true;
         isAdmin[0x8664a9EB1fe83aA5A5a68DaC04D03BcD3215Cb4B] = true;
@@ -212,15 +211,13 @@ contract Governance is ReentrancyGuard, Ownable {
         if (proposal.status == ProposalStaus.Submitted) {
             proposal.status = ProposalStaus.Pending;
             proposal.deadline = block.timestamp + votingDuration;
-            proposal.timeleft =
-                (proposal.deadline - block.timestamp) /
-                1 minutes;
+            proposal.timeleft = (proposal.deadline - block.timestamp) / 1 days;
         } else if (block.timestamp >= proposal.deadline) {
             proposal.timeleft = 0;
             revert VotingTimeElapsed();
         }
 
-        proposal.timeleft = (proposal.deadline - block.timestamp) / 1 minutes;
+        proposal.timeleft = (proposal.deadline - block.timestamp) / 1 days;
         uint256 voterWeight = governanceToken.balanceOf(msg.sender);
         require(voterWeight > 0, "No voting weight");
 
@@ -323,7 +320,7 @@ contract Governance is ReentrancyGuard, Ownable {
         } else {
             proposals[_proposalId].timeleft =
                 (proposals[_proposalId].deadline - block.timestamp) /
-                1 minutes;
+                1 days;
         }
         return proposals[_proposalId];
     }
@@ -337,7 +334,7 @@ contract Governance is ReentrancyGuard, Ownable {
             } else {
                 result[i].timeleft =
                     (result[i].deadline - block.timestamp) /
-                    1 minutes;
+                    1 days;
             }
         }
         return result;
@@ -370,7 +367,7 @@ contract Governance is ReentrancyGuard, Ownable {
                 } else {
                     result[index].timeleft =
                         (result[index].deadline - block.timestamp) /
-                        1 minutes;
+                        1 days;
                 }
 
                 index++;
