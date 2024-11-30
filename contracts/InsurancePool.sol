@@ -334,6 +334,7 @@ contract InsurancePool is ReentrancyGuard, Ownable {
             ICoverContract.updateMaxAmount(poolCovers[i].id);
         }
 
+        userDeposit.amount = 0;
         bqBTC.bqMint(msg.sender, userDeposit.amount);
 
         emit Withdraw(msg.sender, userDeposit.amount, selectedPool.poolName);
