@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./CoverLib.sol";
@@ -88,7 +88,7 @@ interface ILP {
     ) external view returns (CoverLib.Cover[] memory);
 }
 
-contract InsuranceCover is ReentrancyGuard, Ownable {
+contract InsuranceCover is ReentrancyGuard, Ownable2Step {
     using CoverLib for *;
     using Math for uint256;
 
@@ -551,6 +551,11 @@ contract InsuranceCover is ReentrancyGuard, Ownable {
 
     function getUserParticipation(address user) public view returns (uint256) {
         return participation[user];
+    }
+
+    function safeTransferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "New owner cannot be the zero address");
+        transferOwnership(newOwner);
     }
 
     modifier onlyGovernance() {

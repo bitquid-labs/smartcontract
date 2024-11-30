@@ -5,7 +5,7 @@ const PRIVATE_KEY = process.env.PRIVATE_KEY;
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.24",
+  solidity: "0.8.28",
   networks: {
     bitcoinplus: {
       url: "https://bitcoinplus.pwrlabs.io/",

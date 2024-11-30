@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract bqBTC is ERC20, Ownable {
+    using SafeERC20 for IERC20;
+
     uint8 private _customDecimals;
     address public poolAddress;
     address public coverAddress;
@@ -64,13 +67,10 @@ contract bqBTC is ERC20, Ownable {
         if (!nativeSent) {
             mintAmount = (btcAmount * networkMultiplier) / 1 ether;
             require(btcAmount > 0, "amount must be greater than 0");
-            require(
-                alternativeToken.transferFrom(
-                    msg.sender,
-                    address(this),
-                    btcAmount
-                ),
-                "Insufficient BTC tokens sent to mint"
+            alternativeToken.safeTransferFrom(
+                msg.sender,
+                address(this),
+                btcAmount
             );
             btcSent = true;
         }

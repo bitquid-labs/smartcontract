@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "./CoverLib.sol";
 
 interface ICover {
@@ -65,7 +65,7 @@ interface IGov {
     function updateProposalStatusToClaimed(uint256 proposalId) external;
 }
 
-contract InsurancePool is ReentrancyGuard, Ownable {
+contract InsurancePool is ReentrancyGuard, Ownable2Step {
     using CoverLib for *;
     error LpNotActive();
 
@@ -195,13 +195,6 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         uint256 __poolPercentageSplit
     ) public onlyCover {
         pools[_poolId].percentageSplitBalance += __poolPercentageSplit;
-    }
-
-    function deactivatePool(uint256 _poolId) public onlyOwner {
-        if (!pools[_poolId].isActive) {
-            revert LpNotActive();
-        }
-        pools[_poolId].isActive = false;
     }
 
     function getPool(
@@ -518,6 +511,11 @@ contract InsurancePool is ReentrancyGuard, Ownable {
         );
         ICoverContract = ICover(_coverContract);
         coverContract = _coverContract;
+    }
+
+    function safeTransferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "New owner cannot be the zero address");
+        transferOwnership(newOwner);
     }
 
     modifier onlyGovernance() {
