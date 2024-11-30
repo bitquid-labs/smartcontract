@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/Ownable2Step.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./CoverLib.sol";
 
@@ -44,7 +44,7 @@ interface ICover {
     ) external view returns (CoverLib.GenericCoverInfo memory);
 }
 
-contract Governance is ReentrancyGuard, Ownable {
+contract Governance is ReentrancyGuard, Ownable2Step {
     error VotingTimeElapsed();
     error CannotCreateProposalForThisCoverNow();
     struct Proposal {
@@ -419,7 +419,12 @@ contract Governance is ReentrancyGuard, Ownable {
         coverContract = _coverContract;
     }
 
-    function updateRewardAmount(uint256 numberofTokens) public onlyOwner {
+    function safeTransferOwnership(address newOwner) public onlyOwner {
+        require(newOwner != address(0), "New owner cannot be the zero address");
+        transferOwnership(newOwner);
+    }
+
+    function updateRewardAmount(uint256 numberofTokens) public onlyAdmin {
         require(numberofTokens > 0);
         REWARD_AMOUNT = numberofTokens * 10 ** 18;
     }
